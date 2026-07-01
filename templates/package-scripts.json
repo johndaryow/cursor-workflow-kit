@@ -1,0 +1,13 @@
+{
+  "_comment": "Merge these keys into your package.json \"scripts\" section",
+  "sync:agent-skills": "node scripts/sync-agent-skills.mjs",
+  "mc:status": "node scripts/mc-status.mjs",
+  "mc:opener": "node scripts/mc-opener.mjs",
+  "mc:auto-merge": "node scripts/mc-auto-merge.mjs",
+  "mc:slice-closeout": "node scripts/mc-slice-closeout.mjs",
+  "mc:ralph-chain": "node scripts/ralph-chain.mjs",
+  "mc:ralph-launch": "node scripts/ralph-chain-launch.mjs",
+  "mc:ralph-health": "node scripts/mc-ralph-health.mjs",
+  "mc:status-reconcile": "node scripts/mc-status-reconcile.mjs",
+  "mc:ralph-fill-dag": "node scripts/ralph-fill-dag.mjs"
+}

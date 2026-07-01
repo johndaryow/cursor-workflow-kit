@@ -1,0 +1,66 @@
+---
+description: SESSION REPORT template for PR body — plain English for non-developer CEO. Load when closing a slice or writing PR description.
+alwaysApply: false
+---
+
+# SESSION REPORT format (PR description)
+
+CEO reads **this** — not diffs. Put the full report in the **PR description** (and repeat summary in agent chat).
+
+**Do not** ask CEO to paste into MC chat.
+
+## Agent turn order
+
+1. Run slice exit tests / smoke / spot-check
+2. Plain-English **Assurance** paragraph
+3. Auto-merge if policy allows ([`auto-merge-policy.mdc`](./auto-merge-policy.mdc)) **or** state blocked
+4. SESSION REPORT block in PR description
+
+## Template (PR description)
+
+```markdown
+## Assurance
+
+<2–4 sentences: what changed in plain English, what passed, pre-existing reds if any>
+
+## SESSION REPORT
+
+- Program: <CODE>
+- Slice: <machine-id> (e.g. CM3, CDRIVE-7, W18 — not a sentence)
+- Status: done | blocked
+- Date: YYYY-MM-DD
+
+What shipped:
+- <bullet>
+
+Exit tests:
+- Exit — <name>: PASS | FAIL (<note>)
+
+Merge:
+- PR #<n>: auto-merged | pending | blocked
+
+Deploy:
+- <none | hosting | edge:<name> | pages — done/pending>
+
+Cost / telemetry:
+- <one line>
+
+Blocked / deferred:
+- <none or bullet>
+
+CEO action needed:
+- <none | one bullet — human_only gates only>
+
+Next slice:
+- <ACTIVE_SLICE after this PR>
+```
+
+## Rules
+
+- Plain English — no file dumps, no TypeScript in CEO-facing sections
+- **`Slice:` must be a machine id** (`CM3`, `CDRIVE-7`, `W18`) — Ralph uses it to chain; human descriptions go under What shipped
+- One line per exit test
+- `CEO action needed: none` when AFK chain continues automatically
+- Link preview URL when UI changed
+
+Supersedes MC REPORT chat paste for routing. Use SESSION REPORT in PR only — [`session-report-format.mdc`](./session-report-format.mdc).

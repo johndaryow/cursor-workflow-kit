@@ -1,0 +1,117 @@
+---
+description: Pocock workflow for Cursor Cloud — doc-as-controller, AFK execution, SESSION REPORT, CEO non-developer defaults
+alwaysApply: true
+---
+
+# Workflow core (Pocock · Cursor)
+
+Matt Pocock’s pattern adapted for **Cursor Cloud Agents** and a **non-developer CEO**. Canon: [`workflow-master.md`](../../docs/projects/workflow-master.md).
+
+## Two modes
+
+| Mode | Who | When |
+|------|-----|------|
+| **Planning (HITL)** | CEO + grill → PRD → slices | New program, failed slice, architecture — **three fresh chats** |
+| **Execution (AFK)** | Agent alone | Slice in master doc §12 with exit tests + tags |
+
+**AFK means planning is done** — not “no plan.” Tags: [`hitl-afk-slices.mdc`](./hitl-afk-slices.mdc).
+
+## Doc-as-controller (no MC chat relay)
+
+Master doc (`docs/projects/*-master.md`) is Mission Control — no separate MC chat.
+
+**First 60 seconds:**
+
+1. `npm run mc:status` or read `## STATUS DASHBOARD`
+2. Print **Chat name** from `CHAT_RENAME:` ([`agent-chat-session.mdc`](./agent-chat-session.mdc))
+3. Confirm `ACTIVE_PROGRAM` / `ACTIVE_SLICE` or first `AFK_QUEUE` item; if `BLOCKED_BY` ≠ `none` → stop
+4. Read `NEXT_PROMPT` + linked files only — not whole child docs
+
+**End of PR:** Update STATUS + scorecard in **same PR**; SESSION REPORT in PR body ([`session-report-format.mdc`](./session-report-format.mdc) or `session-report` skill). **Never** ask CEO to paste reports.
+
+| Controller | Program |
+|------------|---------|
+| `platform-migration-master.md` | PLATFORM |
+| `workflow-master.md` | WORKFLOW / agent ops |
+| Other `*-master.md` | Per program — PLATFORM sequencing wins |
+
+## Smart zone
+
+One slice = one fresh agent chat. Status block (~50 lines) + slice prompt only.
+
+## Cloud agent end state
+
+Every task ends with:
+
+1. Branch pushed (`cursor/<name>-<id>`)
+2. PR + SESSION REPORT + plain-English assurance
+3. STATUS updated in same PR
+4. Auto-merge if AFK + green ([`auto-merge-policy.mdc`](./auto-merge-policy.mdc))
+5. Post-merge scoped deploy + spot-check when UI/deploy touched
+6. Screenshots when UI-visible
+
+**Default:** Cloud Agent · Composer 2.5 (2.5 Fast if blocked). CEO says "local" only when needed.
+
+Do **not** push to `main`. Do **not** deploy prod hosting/functions before merge unless CEO hotfix OK.
+
+## Paths
+
+| Change | Path |
+|--------|------|
+| UI / hosting | Preview → merge → prod deploy |
+| Backend only | Merge → scoped deploy (`functions:<name>`, firestore, Edge) |
+| Mixed | Preview for UI + note post-merge function deploys |
+
+Preview: build → deploy preview channel for PR. Prod UI: your production URL.
+
+## CEO role
+
+CEO does **not** read code, diffs, or TypeScript. CEO reads **SESSION REPORT** and **Cursor Automations** only.
+
+CEO acts on: grill answers, `human_only` gates (credentials, DNS, billing), explicit OK for HITL slices.
+
+## Automation first
+
+CEO almost never runs terminal or vendor dashboards — **agent runs CLI, git, deploy, MCP**.
+
+| Priority | Who |
+|----------|-----|
+| 1 | Agent — shell, git, deploy, logs, MCP |
+| 2 | Existing `npm run …` script |
+| 3 | CEO one action — OAuth Allow, DNS UI, billing cancel, new Cursor secret |
+| 4 | **Never** — multi-step terminal instructions for routine work |
+
+CEO manual only: credential UI, DNS cutover, `CEO_GATE: explicit_ok_in_chat`, captcha/2FA. Format: [`manual-task-guidance.mdc`](./manual-task-guidance.mdc). **Do not** ask CEO to merge AFK S6b PRs.
+
+## Skills (invoke when relevant)
+
+| Skill | Use |
+|-------|-----|
+| `grill-me` | Alignment — new programs only, not AFK batches |
+| `planning-session` | **PRD only** after grill (Pocock `/to-prd`) — hard stop before slices |
+| `slice-planning` | Tracer bullets + tags + §12 + Ralph queue after PRD merges (Pocock `/to-issues`) |
+| `afk-slice` | Execute one AFK slice |
+| `ralph-loop` | Chain AFK slices (morning automation / `mc:opener`) |
+| `session-report` | CEO-readable PR closeout (tone: `ceo-communication.mdc`) |
+| `agent-discipline` | Token/cost + model/chat picks every session |
+| `tdd` | Logic changes |
+| `design-system-first` | UI work |
+| `improve-codebase` | Architecture planning |
+| `mc-status` | Where we are + chat rename before execution |
+| `handoff` | Rare — prefer fresh chat per slice |
+
+## Ralph loop
+
+1. STATUS `AFK_QUEUE` in master doc
+2. **Morning automation** — brief + optional auto-start when gates pass
+3. **Ralph continue on merge** — after S6b PR merges, auto-start next Lane A batch ([`workflow-cursor-automations.md`](../../docs/projects/workflow-cursor-automations.md))
+4. `npm run mc:opener` or CEO: `Resume migration today` — manual kickoff / unblock
+5. Auto-merge when policy allows
+
+## Secrets (cloud)
+
+`GOOGLE_APPLICATION_CREDENTIALS_JSON` · `AGENT_BROWSER_*` · `GITHUB_TOKEN` (auto-merge) · optional `SUPABASE_SERVICE_ROLE_KEY`
+
+| `handoff` | Rare — prefer fresh chat per slice |
+
+Chat naming + continue: [`agent-chat-session.mdc`](./agent-chat-session.mdc) · `npm run mc:status` → `CHAT_RENAME:`

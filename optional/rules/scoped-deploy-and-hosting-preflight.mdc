@@ -1,0 +1,27 @@
+---
+description: Deploy the smallest relevant Firebase target by default and run build check before hosting deploys
+alwaysApply: false
+---
+# Scoped Deploy + Hosting Preflight
+
+When the user asks to deploy, choose the smallest deploy target that matches the change.
+
+## Default deploy strategy
+
+- Frontend/UI-only changes: run `npm run build:check` first, then deploy hosting only.
+- Function-only changes: deploy only changed functions.
+- Firestore rules/index changes: deploy only firestore.
+- Use full `firebase deploy` only when multiple deploy targets changed, or when the user explicitly asks for full deploy.
+
+## Commands
+
+- Hosting only: `firebase deploy --only hosting`
+- One function: `firebase deploy --only functions:<functionName>`
+- Multiple functions: `firebase deploy --only functions:a,functions:b`
+- Firestore only: `firebase deploy --only firestore`
+
+## Communication requirement
+
+Before running deploy, state in one short sentence what target is being deployed and why that scope was chosen.
+
+If the deploy enables new always-on Functions, schedulers, or wide listener changes, also run the **Cost check** block from [`cost-estimate-before-action.mdc`](./cost-estimate-before-action.mdc) and get CEO approval first.

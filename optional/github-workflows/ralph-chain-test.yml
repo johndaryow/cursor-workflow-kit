@@ -1,0 +1,33 @@
+# Ralph planner regression tests — only when chain scripts or master docs change (no email spam on every PR).
+name: Ralph chain tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ralph-chain*.mjs'
+      - 'scripts/ralph-master-registry.mjs'
+      - 'scripts/mc-status-reconcile.mjs'
+      - 'scripts/mc-slice-closeout.mjs'
+      - 'docs/projects/*-master.md'
+      - '.github/workflows/ralph-chain-test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ralph-chain*.mjs'
+      - 'scripts/ralph-master-registry.mjs'
+      - 'scripts/mc-status-reconcile.mjs'
+      - 'scripts/mc-slice-closeout.mjs'
+      - 'docs/projects/*-master.md'
+      - '.github/workflows/ralph-chain-test.yml'
+
+jobs:
+  ralph-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ralph-chain planner tests
+        run: npm run test:ralph-chain
+
+      - name: Run ralph-chain launch tests
+        run: npm run test:ralph-launch

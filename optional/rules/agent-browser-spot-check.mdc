@@ -1,0 +1,54 @@
+---
+description: Agent-owned browser spot-checks for Design Studio — CEO login via .env.local, never ask CEO to verify UI
+alwaysApply: false
+---
+
+# Agent browser spot-checks (CEO account)
+
+**The agent runs post-deploy / parity spot-checks in the browser or via the same auth path the app uses.** Do not ask the CEO to log in and click around unless automation is blocked (captcha, 2FA change, etc.).
+
+## Credentials (never commit)
+
+**Cloud agents:** set in **Cursor Cloud → Secrets** (preferred for cloud-first workflow):
+
+| Variable | Value |
+|----------|--------|
+| `AGENT_BROWSER_EMAIL` | your test account email (Cursor secret) |
+| `AGENT_BROWSER_PASSWORD` | CEO password — dashboard only |
+
+**Local fallback:** same keys in **`.env.local`** at repo root (gitignored).
+
+Pre-flight when script exists:
+
+```bash
+npm run agent:browser-auth-check
+```
+
+Must print `OK: agent browser credentials valid for <email>`. If the script is missing, verify sign-in manually via API path (Supabase JWT) using env vars above.
+
+## When to spot-check
+
+After deploy or DSC vertical soak when exit tests say "CEO spot-check":
+
+1. **API path (preferred, fast):** Sign in with `.env.local` creds → Supabase `project_steps` read (same RLS as the app). Confirm `step_kind`, tracks, config, status.
+2. **Browser path:** `cursor-ide-browser` — log in if needed, open a known test project (see below), open Song/Content/Layout panel, screenshot if useful.
+
+## Known test projects (Firestore `projects/{id}`)
+
+| Job order | Project id | Song step |
+|-----------|------------|-----------|
+| PP37937 | `auto_18697313288496_50275183690032` | `step-1771459432268` |
+| PP37712 | `auto_18686448664880_50256298475824` | `step-1771459432268` |
+| PP37939 | `auto_18697390129456_50275323085104` | `step-1771459432268` |
+
+Deep link pattern: `/design-studio/{projectId}?view=job-orders`
+
+## Password rotation
+
+If `agent:browser-auth-check` fails: CEO sets new password in Firebase Auth; agent updates **only** `.env.local`. Do not paste passwords into chat, rules, or docs.
+
+## Related
+
+- GCP deploy auth: `npm run gcp:auth` — [`gcp-agent-auth.mdc`](./gcp-agent-auth.mdc)
+- Content soak script: `npm run agent:pp37982-content-soak`
+- Parity: `npm run verify:project-steps-parity` (needs `SUPABASE_SERVICE_ROLE_KEY` or Supabase MCP if deploy SA lacks Secret Manager)

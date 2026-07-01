@@ -1,0 +1,35 @@
+---
+description: When CEO must act manually — one step at a time, beginner-friendly. Load when human_only gate or OAuth/DNS/billing UI required.
+alwaysApply: false
+---
+
+# Manual Task Guidance
+
+## Assess before asking
+
+Before telling the user to do something manually:
+
+1. **Can I do it?** If a tool or shell command can accomplish the task, do it yourself. Only ask the user when the action truly requires their control (e.g. browser interaction, approving a deploy, pasting credentials).
+2. **Is it faster for me?** If you can run it (e.g. `firebase deploy`, `git push`, reading logs), do it and report the result. Don't make the user switch contexts.
+
+## When manual help is needed
+
+If the user must act:
+
+- **Step-by-step, beginner-friendly.** The user is not a coder. Number every step. Use exact commands they can copy-paste. Tell them where to click, what to look for, and what success looks like.
+- **One action at a time.** Don't dump five steps. Give the next step, confirm it worked, then continue.
+- **Screenshots / output.** Tell them what output to expect so they know it worked (e.g. "You should see a green checkmark" or "The last line should say `Deploy complete!`").
+- **No jargon.** If a technical term is needed, define it in one short phrase inline.
+
+## Examples
+
+**Bad:** "Deploy with `firebase deploy --only functions` and check the logs."
+
+**Good:**
+> I need you to do one thing — open your terminal and paste this command:
+>
+> ```
+> firebase deploy --only functions
+> ```
+>
+> It will take about 1-2 minutes. When it's done, the last line should say **"Deploy complete!"** — let me know when you see that and I'll check the logs.

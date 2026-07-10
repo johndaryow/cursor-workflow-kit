@@ -14,15 +14,33 @@ fi
 
 echo "Installing workflow kit into: $ROOT"
 
-# Skills
+# Skills (Cursor)
 mkdir -p "$ROOT/.cursor/skills"
 rsync -a --delete "$KIT/cursor/skills/" "$ROOT/.cursor/skills/"
 
-# Rules
+# Rules (Cursor)
 mkdir -p "$ROOT/.cursor/rules"
 for f in "$KIT/cursor/rules/"*.mdc; do
   cp "$f" "$ROOT/.cursor/rules/"
 done
+
+# Skills (Claude Code) — same Agent Skills format as Cursor, own folder for native discovery
+mkdir -p "$ROOT/.claude/skills"
+rsync -a --delete "$KIT/claude/skills/" "$ROOT/.claude/skills/"
+
+# Rules (Claude Code) — plain markdown, imported from CLAUDE.md instead of Cursor's alwaysApply
+mkdir -p "$ROOT/.claude/rules"
+for f in "$KIT/claude/rules/"*.md; do
+  cp "$f" "$ROOT/.claude/rules/"
+done
+
+# CLAUDE.md — only create if the repo doesn't already have one; never overwrite
+if [[ ! -f "$ROOT/CLAUDE.md" ]]; then
+  cp "$KIT/claude/CLAUDE.md" "$ROOT/CLAUDE.md"
+  echo "Created $ROOT/CLAUDE.md"
+else
+  echo "Skip CLAUDE.md (already exists) — merge docs/projects/CLAUDE-workflow-snippet.md into it by hand"
+fi
 
 # Scripts
 mkdir -p "$ROOT/scripts"
@@ -30,9 +48,9 @@ for f in "$KIT/scripts/"*.mjs; do
   cp "$f" "$ROOT/scripts/"
 done
 
-# GitHub Actions
+# GitHub Actions (optional Tier 3 — Ralph chain, Cursor Cloud Agent specific)
 mkdir -p "$ROOT/.github/workflows"
-for f in "$KIT/.github/workflows/"*.yml; do
+for f in "$KIT/optional/github-workflows/"*.yml; do
   cp "$f" "$ROOT/.github/workflows/"
 done
 
@@ -68,7 +86,8 @@ fi
 echo ""
 echo "Done. Next steps:"
 echo "  1. Merge templates/package-scripts.json into package.json"
-echo "  2. Paste User Rule from docs/projects/workflow-user-rules-canonical.md"
-echo "  3. Rename docs/projects/my-program-master.md → your-program-master.md"
-echo "  4. Trim scripts/ralph-chain-config.mjs for your slice ids"
-echo "  5. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on Cloud VM)"
+echo "  2. Cursor: paste User Rule from docs/projects/workflow-user-rules-canonical.md"
+echo "  3. Claude Code: CLAUDE.md was created fresh, or merge docs/projects/CLAUDE-workflow-snippet.md if you already had one"
+echo "  4. Rename docs/projects/my-program-master.md → your-program-master.md"
+echo "  5. Trim scripts/ralph-chain-config.mjs for your slice ids"
+echo "  6. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on Cloud VM) — Claude Code chaining is manual by default, see claude/skills/ralph-loop/SKILL.md"

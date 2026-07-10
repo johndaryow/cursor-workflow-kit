@@ -2,13 +2,15 @@
 
 Everything you need to replicate the PP agent workflow in another repo — organized by tier.
 
+**Two agents, one workflow:** every tier below ships for **both** Cursor (`cursor/`) and Claude Code (`claude/`). Same skill names, same STATUS-dashboard-as-controller pattern, same tags. See [`claude/README.md`](./claude/README.md) for the Cursor ↔ Claude Code mapping table, and the one real gap (Ralph's merge-triggered auto-chain, which is currently Cursor-Cloud-specific).
+
 ---
 
 ## Tier 1 — Required (minimum viable workflow)
 
-**You get this in `cursor/skills/` + `cursor/rules/` + User Rule.**
+**You get this in `cursor/skills/` + `cursor/rules/` + User Rule (Cursor), and `claude/skills/` + `claude/rules/` + `CLAUDE.md` (Claude Code).**
 
-### Skills (11)
+### Skills (11 — mirrored in `cursor/skills/` and `claude/skills/`, same `SKILL.md` format)
 
 | Skill | One line |
 |-------|----------|
@@ -16,7 +18,7 @@ Everything you need to replicate the PP agent workflow in another repo — organ
 | `planning-session` | PRD only — no slices |
 | `slice-planning` | Tracer bullets + AFK/HITL tags + §12 |
 | `afk-slice` | Execute one scripted slice |
-| `ralph-loop` | How merge → next slice works |
+| `ralph-loop` | How merge → next slice works (**Cursor and Claude Code chain differently** — see the skill) |
 | `mc-status` | “Where are we?” from STATUS dashboard |
 | `session-report` | Plain-English PR closeout |
 | `agent-discipline` | Token/cost + model picks |
@@ -24,27 +26,30 @@ Everything you need to replicate the PP agent workflow in another repo — organ
 | `improve-codebase` | Architecture planning only |
 | `handoff` | Emergency mid-slice only |
 
-### Rules (9 — `alwaysApply` or load every execution chat)
+### Rules (9 — `alwaysApply` in Cursor / imported into `CLAUDE.md` in Claude Code, or load on demand)
 
-| Rule | One line |
-|------|----------|
-| `workflow-core.mdc` | Planning vs AFK; doc-as-controller; Ralph |
-| `ceo-communication.mdc` | Outcome-first plain English for founder |
-| `auto-merge-policy.mdc` | Agent merges AFK when tests green |
-| `agent-chat-session.mdc` | Chat naming; Continue / status behavior |
-| `hitl-afk-slices.mdc` | AUTONOMY / CEO_GATE / MERGE_POLICY tags |
-| `session-report-format.mdc` | PR report template |
-| `manual-task-guidance.mdc` | One step when CEO must click vendor UI |
-| `cost-estimate-before-action.mdc` | Estimate before expensive cloud ops |
-| `pair-debugging.mdc` | Agent owns fix; CEO one browser step max |
+| Cursor rule (`cursor/rules/*.mdc`) | Claude Code rule (`claude/rules/*.md`) | One line |
+|------|------|----------|
+| `workflow-core.mdc` | `workflow-core.md` | Planning vs AFK; doc-as-controller; chain |
+| `ceo-communication.mdc` | `ceo-communication.md` | Outcome-first plain English for founder |
+| `auto-merge-policy.mdc` | `auto-merge-policy.md` | Agent merges AFK when tests green |
+| `agent-chat-session.mdc` | `agent-chat-session.md` | Chat naming; Continue / status behavior |
+| `hitl-afk-slices.mdc` | `hitl-afk-slices.md` | AUTONOMY / CEO_GATE / MERGE_POLICY tags |
+| `session-report-format.mdc` | `session-report-format.md` | PR report template — on demand |
+| `manual-task-guidance.mdc` | `manual-task-guidance.md` | One step when CEO must click vendor UI — on demand |
+| `cost-estimate-before-action.mdc` | `cost-estimate-before-action.md` | Estimate before expensive cloud ops — on demand |
+| `pair-debugging.mdc` | `pair-debugging.md` | Agent owns fix; CEO one browser step max — on demand |
 
-### User Rule (1)
+The first five are `alwaysApply: true` in Cursor and are `@`-imported into `claude/CLAUDE.md` for Claude Code — both load every session. The last four are `alwaysApply: false` / loaded on demand in Cursor, and in Claude Code are read by a skill (or the agent) only when the situation calls for it — not imported into `CLAUDE.md`, to avoid spending context every session.
 
-Paste from `templates/workflow-user-rules-canonical.md` into **Cursor → Customize → Rules → User**.
+### User Rule / CLAUDE.md (1 each)
+
+- **Cursor:** paste `templates/workflow-user-rules-canonical.md` into **Cursor → Customize → Rules → User**.
+- **Claude Code:** `install.sh` writes `claude/CLAUDE.md` to your repo root as `CLAUDE.md` (skips if one already exists — merge `templates/CLAUDE-workflow-snippet.md` into it instead).
 
 ### Doc template (1)
 
-`templates/program-master-stub.md` — STATUS DASHBOARD + §12 pattern for your program.
+`templates/program-master-stub.md` — STATUS DASHBOARD + §12 pattern for your program. Agent-agnostic — both Cursor and Claude Code read the same master doc.
 
 ---
 
@@ -69,7 +74,7 @@ Paste from `templates/workflow-user-rules-canonical.md` into **Cursor → Custom
 
 ## Tier 3 — Full Ralph chain (hands-off slice queue)
 
-**Adds merge → next Cloud Agent automatically.**
+**Adds merge → next Cloud Agent automatically. This tier is Cursor-specific — see the callout below before assuming it works from Claude Code too.**
 
 | Script | npm script | Purpose |
 |--------|------------|---------|
@@ -89,6 +94,8 @@ Paste from `templates/workflow-user-rules-canonical.md` into **Cursor → Custom
 **Docs:** `templates/workflow-afk-foundation.md`, `templates/workflow-master.md`
 
 **Customize:** Edit `ralph-chain-config.mjs` — remove PP Workers/S6b maps; add your program’s serial chain or rely on doc-only registry.
+
+**Claude Code gap:** `ralph-continue-on-merge.yml` calls the **Cursor Cloud Agent API** to start the next agent — there's no Claude Code equivalent wired up in this kit. Everything upstream of that one API call (`mc:ralph-chain`, the STATUS dashboard, `AFK_QUEUE`) is agent-agnostic and works the same from either tool. From Claude Code, chain slices by saying "Continue" in a fresh session, or build your own trigger using Claude Code's session/Routine APIs if you want it automatic. See [`claude/skills/ralph-loop/SKILL.md`](./claude/skills/ralph-loop/SKILL.md).
 
 ---
 
@@ -136,17 +143,21 @@ Write equivalents in the **target repo** when that product needs them.
 
 ## CEO cheat sheets (included in `templates/`)
 
-- `cursor-invoke-cheatsheet.md` — `/grill-me` slash commands
-- `workflow-user-rules-canonical.md` — single User Rule
+- `cursor-invoke-cheatsheet.md` — `/grill-me` slash commands (Cursor)
+- `claude-invoke-cheatsheet.md` — `/grill-me` slash commands (Claude Code)
+- `workflow-user-rules-canonical.md` — single User Rule (Cursor)
+- `CLAUDE-workflow-snippet.md` — CLAUDE.md merge snippet (Claude Code)
 - `workflow-skills-reconcile.md` — delete old global skills
 
 ---
 
 ## File count summary
 
+Counts are **per agent** — Tier 1 skills/rules exist in both `cursor/` and `claude/`.
+
 | Tier | Skills | Rules | Scripts | GHA | Templates |
 |------|--------|-------|---------|-----|-----------|
-| 1 Required | 11 | 9 | 0 | 0 | 2+ |
+| 1 Required | 11 × 2 agents | 9 × 2 agents | 0 | 0 | 4+ |
 | 2 AFK | — | — | 8 | 0 | 1 |
-| 3 Ralph | — | — | 5 | 2 | 2 |
-| 4 Optional | 1 | 3 | — | — | — |
+| 3 Ralph (Cursor-only) | — | — | 5 | 2 | 2 |
+| 4 Optional | 1 (Cursor only so far) | 3 (Cursor only so far) | — | — | — |

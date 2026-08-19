@@ -49,7 +49,11 @@ CEO action needed:
 - <none | one bullet — human_only gates only>
 
 Next slice:
-- <ACTIVE_SLICE after this PR>
+- <ACTIVE_SLICE after this PR> — prompt: `npm run mc:opener -- <program>`
+
+```text
+<paste the exact block mc:opener printed, so the next session starts from it>
+```
 ```
 
 ## Rules
@@ -58,6 +62,9 @@ Next slice:
 - **`Slice:` must be a machine id** (`CM3`, `CDRIVE-7`, `W18`) — the chain uses it to advance the queue; human descriptions go under What shipped
 - One line per exit test
 - `CEO action needed: none` when AFK chain continues automatically
+- **`Next slice:` names the program and carries the prompt** — run `npm run mc:opener -- <program>` and
+  paste its output in the report. Never write "say Continue": it does not say which program
+  ([`agent-chat-session.md`](./agent-chat-session.md))
 - Link preview URL when UI changed
 
 Use SESSION REPORT in the PR only, regardless of which agent opened it.

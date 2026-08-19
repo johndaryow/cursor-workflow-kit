@@ -28,9 +28,17 @@ npm run mc:status -- workflow
 
 ### CEO asks: "Continue" / "Continue where we left off"
 
-1. Run `npm run mc:status -- platform` then `npm run mc:opener -- platform`
+Honour it — it is a fallback the CEO may type. But resolve the ambiguity yourself; do not ask them
+which program.
+
+1. Run `npm run mc:status -- <program>` then `npm run mc:opener -- <program>`. If the CEO named no
+   program, use `ACTIVE_PROGRAM` from the dashboard and say in one line which one you picked.
 2. **First line:** Chat name from `CHAT_RENAME:`
 3. Execute `RECOMMENDED_SLICE` per `afk-slice` skill
+
+**Never offer "Continue" back to the CEO.** When a status answer ends with a next step, that step is
+the prompt `mc:opener` printed, in a fenced block, naming its program —
+[`agent-chat-session.mdc`](../../rules/agent-chat-session.mdc).
 
 ## Manual
 
@@ -41,8 +49,11 @@ npm run mc:status -- workflow
 ## CEO one-liner to start execution
 
 ```bash
-npm run mc:opener
+npm run mc:opener -- <program>
 ```
+
+Always pass the program. Bare `mc:opener` defaults to `platform`, which is right only when platform is
+what the CEO meant. The output is a complete, pasteable prompt — hand that over, not a magic word.
 
 Paste into a **new Cloud Agent** — includes chat rename + slice id.
 

@@ -19,7 +19,7 @@ This session ends with a **destination document only**. Do **not** write:
 - `AFK_QUEUE`, `NEXT_PROMPT`, or chain tag blocks
 - Slice roadmap or "execution plan" sections in the PRD
 
-**Next step:** CEO opens a **fresh session** → `slice-planning` skill.
+**Next step:** `slice-planning` in a fresh session — **you** merge this PR and print that prompt before ending (see *Closing this session*). The CEO should never have to compose it or check whether this merged.
 
 ## Process
 
@@ -73,6 +73,19 @@ One line only: *Execution slices: planned in separate session → `{program}-mas
 - SESSION REPORT with human label: `Slice: {PROGRAM} PRD planning` (not a machine slice id)
 - Title pattern: `docs({PROGRAM}): PRD — {short goal}` — avoids a false chain trigger
 - **Do not** set `AFK_QUEUE` or write §12 blocks in this PR
+
+## Closing this session (do not leave it to the CEO)
+
+Canon: [`planning-chain-handoff.md`](../../rules/planning-chain-handoff.md).
+
+1. Docs-only PR → run the gate (`npm run mc:merge-verdict`) → **merge it yourself when green.**
+   The CEO does not review planning documents.
+2. `npm run mc:handoff -- <program>` — prints the next step's prompt, derived from the master doc's
+   `GRILL:` / `PRD:` / `SLICING:` lines. It **refuses** if the doc the next session must read is not
+   on `origin/main` yet; that refusal is the point, so fix the merge rather than the prompt.
+3. Offer to start the next session with `create_session` (ask once per conversation), or give the
+   CEO the prompt in one copyable block.
+4. Last line of the SESSION REPORT: `Next: <step> — <one sentence>. Prompt: npm run mc:handoff -- <program>`
 
 ## Model
 

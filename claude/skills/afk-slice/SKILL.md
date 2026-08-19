@@ -31,7 +31,10 @@ description: Executes one AFK slice from master doc STATUS and NEXT_PROMPT — v
 5. If `MERGE_POLICY: auto_when_green` and all exit PASS → `npm run mc:auto-merge -- <pr>` (or the GitHub MCP merge tool)
 6. Post-merge: scoped deploy + spot-check if required
 7. Advance `AFK_QUEUE` in STATUS if slice complete
-8. **Chain:** see [`ralph-loop`](../ralph-loop/SKILL.md) for how the next slice gets picked up — mechanism differs between Cursor (GitHub Action → Cloud Agent) and Claude Code (manual "Continue" or a scheduled Routine). **Do not** trigger the next agent yourself from inside the slice session (duplicate risk).
+8. **Hand off with a real prompt:** run `npm run mc:opener -- <program>` and paste its output into the
+   SESSION REPORT's `Next slice:` block. **Never** end by telling the CEO to type "Continue" — it does
+   not say which program ([`agent-chat-session.md`](../../rules/agent-chat-session.md)).
+9. **Chain:** see [`ralph-loop`](../ralph-loop/SKILL.md) for how the next slice gets picked up — mechanism differs between Cursor (GitHub Action → Cloud Agent) and Claude Code (the cold-start prompt above or a scheduled Routine). **Do not** trigger the next agent yourself from inside the slice session (duplicate risk).
 
 ## MUST NOT
 

@@ -26,6 +26,16 @@ npm run mc:auto-merge -- <pr-number>
 
 Or `gh pr merge <n> --squash --delete-branch` when `gh` is authenticated.
 
+## Planning PRs — the chain merges its own
+
+A **docs-only** grill / PRD / slice-planning PR merges itself when green, with no CEO review. The
+CEO was in the room for the grill; re-reading the write-up is not review.
+
+Scope, conditions and the deny-list boundary: [`planning-chain-handoff.mdc`](./planning-chain-handoff.mdc).
+The short version: **docs only**, gate run with `npm run mc:merge-verdict`, SESSION REPORT in the
+body, STATUS updated in the same PR. One line outside `docs/` (plus the slice-id registry) and the
+PR is back under the rules below.
+
 ## When agent MUST NOT auto-merge
 
 - `AUTONOMY: HITL`
@@ -43,6 +53,50 @@ Agent continues same session (do not stop at merge):
 2. Spot-check per [`agent-browser-spot-check.mdc`](./agent-browser-spot-check.mdc) when UI/deploy touched
 3. Update STATUS: `LAST_MERGED_PR`, clear `LAST_PR`, advance `AFK_QUEUE`
 4. SESSION REPORT final section: `Merge: PR #n merged: yes (auto)`
+
+## If the merge does not happen — this is the part that used to fail silently
+
+On 2026-08-16 a finished, green AFK slice (FCN-5, PR #1734) simply did not merge. Nothing
+recorded that. The dashboard said `BLOCKED_BY: none`, the queue looked empty, and the chain
+appeared idle when it was in fact stalled behind work that was already done — its
+`RALPH_RUNNING` claim never released. That cost over an hour.
+
+**Not every venue can merge from a script.** Check yours first:
+
+```bash
+npm run mc:merge-capability
+```
+
+| Mode | What it means |
+|------|---------------|
+| `rest` | A real API token — `npm run mc:auto-merge -- <n>` merges. |
+| `gh-cli` | `gh` authenticated — same command merges. |
+| `mcp-handoff` | The script **cannot** merge here (typical Claude Code session). You must. |
+
+**On `mcp-handoff` the agent finishes the merge — it does not stop.** Fetch the PR and its
+checks with the GitHub MCP tools, then feed them back through every gate rather than judging
+by eye:
+
+```bash
+npm run mc:auto-merge -- <pr> --from-json /tmp/pr.json
+```
+
+Merge with `mcp__github__merge_pull_request` (squash) **only** if that prints `ALLOW`. The
+gate is identical on both paths — the MCP path does the fetching, never the deciding.
+
+**If you still cannot merge, say so where a human will see it. Never leave an open PR in
+silence:**
+
+```bash
+npm run mc:merge-blocked -- --program <program> --pr <n> --reason "<why>"
+```
+
+That writes `BLOCKED_BY` into the STATUS dashboard and prints the SESSION REPORT lines to
+use. `CEO action needed:` then names the one click. A stall a human can see is recoverable;
+a silent one is not.
+
+An hourly watch (`stale-green-pr-watch.yml`) also alarms on any AFK `auto_when_green` PR that
+is green and older than 15 minutes. It is a backstop, not permission to skip the above.
 
 ## GitHub setup (CEO one-time)
 

@@ -26,7 +26,7 @@ Copy tone from [`ceo-communication.mdc`](../../../rules/ceo-communication.mdc). 
 - **#348 already merged** before fix → **RTE-F4 didn't auto-start**. Manual kick needed once
 
 **You — one check**
-- [cursor.com/automations](https://cursor.com/automations) → Ralph continue on merge → **Environment** = same saved bundle as Cloud Agents
+- [cursor.com/automations](https://cursor.com/automations) → `PP · Ralph continue on merge` → **Environment = pp-workspace** (same saved bundle as Cloud Agents)
 - Re-save snapshot only if you changed secrets lately
 
 **Next**

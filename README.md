@@ -6,6 +6,24 @@ Improve the process **here once** → update each product repo when ready. Same 
 
 See [`MANIFEST.md`](./MANIFEST.md) for the full list.
 
+## The kit is the source, and drift goes red
+
+"Update each product repo when ready" used to mean *never*. Measured in code on 2026-08-19: of 81
+kit-owned paths, 20 were missing from this kit and 31 more had diverged from the repos it is meant to
+seed.
+
+Now `kit-manifest.json` says which paths the kit owns, and every repo runs `npm run kit:drift` on
+push and PR. It goes **red** when a copy has diverged, names the files, and says **which side is
+newer** — a check that only says "different" makes the next agent guess.
+
+```bash
+npm run kit:drift                                                  # in any repo, or here
+node scripts/kit-manifest-build.mjs --from ../pp-workspace --apply    # the kit takes a change
+node scripts/kit-manifest-build.mjs --from ../pp-workspace --install  # a repo takes it back
+```
+
+Deploy steps stay repo-local and are excluded on purpose — see MANIFEST.md, Tier 0.
+
 ## Install into a product repo
 
 Tell your agent: **“Update workflow from central kit”**

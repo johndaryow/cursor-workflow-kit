@@ -43,10 +43,19 @@ else
 fi
 
 # Scripts
+# kit-manifest-build.mjs stays in the kit: it BUILDS the manifest from a live repo,
+# which is the kit's job, not the repo's. Repos only ever CHECK against it.
 mkdir -p "$ROOT/scripts"
 for f in "$KIT/scripts/"*.mjs; do
+  base="$(basename "$f")"
+  [[ "$base" == "kit-manifest-build.mjs" ]] && continue
   cp "$f" "$ROOT/scripts/"
 done
+
+# Kit manifest — the contract the drift check reads. A path listed in it is owned
+# by the kit; a path outside it belongs to the repo. Deploy steps are deliberately
+# excluded and stay repo-local (AFKF-D24).
+cp "$KIT/kit-manifest.json" "$ROOT/kit-manifest.json"
 
 # GitHub Actions (optional Tier 3 — Ralph chain, Cursor Cloud Agent specific)
 mkdir -p "$ROOT/.github/workflows"
@@ -85,9 +94,10 @@ fi
 
 echo ""
 echo "Done. Next steps:"
-echo "  1. Merge templates/package-scripts.json into package.json"
+echo "  1. Merge templates/package-scripts.json into package.json (includes kit:drift)"
 echo "  2. Cursor: paste User Rule from docs/projects/workflow-user-rules-canonical.md"
 echo "  3. Claude Code: CLAUDE.md was created fresh, or merge docs/projects/CLAUDE-workflow-snippet.md if you already had one"
 echo "  4. Rename docs/projects/my-program-master.md → your-program-master.md"
 echo "  5. Trim scripts/ralph-chain-config.mjs for your slice ids"
-echo "  6. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on Cloud VM) — Claude Code chaining is manual by default, see claude/skills/ralph-loop/SKILL.md"
+echo "  6. Run 'npm run kit:drift' — it must print OK before you start work"
+echo "  7. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on Cloud VM) — Claude Code chaining is manual by default, see claude/skills/ralph-loop/SKILL.md"

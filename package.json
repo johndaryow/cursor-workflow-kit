@@ -1,0 +1,12 @@
+{
+  "name": "cursor-workflow-kit",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The source of the agent workflow. Repos install it; scripts/kit-drift-check.mjs goes red when a repo's copy has drifted (AFKF-1).",
+  "scripts": {
+    "kit:drift": "node scripts/kit-drift-check.mjs",
+    "kit:manifest": "node scripts/kit-manifest-build.mjs",
+    "test:kit-drift": "node scripts/kit-drift-check.test.mjs"
+  }
+}

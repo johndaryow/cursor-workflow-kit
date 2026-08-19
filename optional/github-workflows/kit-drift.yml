@@ -1,0 +1,101 @@
+# AFKF-1 — the kit is the source, and drift goes red.
+#
+# WHY THIS EXISTS. The workflow was written once and then lived three times: in pp-workspace, in
+# pp-shopify-theme, and in cursor-workflow-kit — the kit that is supposed to seed the next repo.
+# Measured on 2026-08-19 in code, not from memory: of 81 kit-owned paths, 20 were missing from the
+# kit outright and 31 more had diverged. A fourth repo started from the kit that day would have
+# inherited the workflow from before the lessons that made it work.
+#
+# WHAT IT DOES. Compares every path in kit-manifest.json against this repo's copy and goes red on
+# any divergence, naming the files AND which side is newer. Editing a workflow file in place stops
+# being possible without this check noticing.
+#
+# WHAT IT DOES NOT OWN. Deploy steps stay repo-local (AFKF-D24): firebase config, wrangler config,
+# scripts/deploy-*, the Shopify theme guard. Those are the repo's own business and are excluded from
+# the manifest by pattern, with a unit test that fails if one is ever added.
+#
+# NO `paths:` FILTER, DELIBERATELY. A required check that never reports leaves a PR permanently
+# "waiting for status", which stalls the chain on its own docs-only STATUS commits. The job always
+# runs and always reports; on a docs/-only diff it short-circuits INSIDE the job instead. One line
+# outside docs/ puts the full check back. Same rule as proof-baseline.yml — short-circuit inside the
+# job, never filter the job away.
+
+name: kit drift
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: kit-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # The job name is the status check context. Renaming it detaches any branch protection rule.
+  kit-drift:
+    name: kit drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The docs-only test diffs against the base commit; the drift report reads git log to say
+          # which side is newer. Both need history.
+          fetch-depth: 0
+
+      - name: Is this diff docs-only?
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base='${{ github.event.pull_request.base.sha }}'
+          else
+            base='${{ github.event.before }}'
+          fi
+
+          # A first push, a force-push and a squash merge can all leave `before` unresolvable.
+          # Unknown scope counts as CODE, never as docs — the only acceptable failure direction is
+          # running the check needlessly.
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "base commit unresolvable — treating as code"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed="$(git diff --name-only "$base" "${{ github.sha }}")"
+          echo "changed files:"; echo "$changed"
+
+          if [ -z "$changed" ]; then
+            echo "empty diff — treating as code"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          elif echo "$changed" | grep -qvE '^docs/'; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Docs-only diff — nothing kit-owned can have changed
+        if: steps.scope.outputs.docs_only == 'true'
+        run: |
+          echo "This diff touches only docs/. No kit-owned path lives under docs/, so the manifest"
+          echo "cannot have been invalidated by it. Reporting green without re-hashing the repo."
+
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.docs_only != 'true'
+        with:
+          node-version: '20'
+
+      # The drift check has no dependencies — plain Node, no npm install. That is deliberate: a
+      # check that needs the repo to build cannot tell you your workflow files drifted while the
+      # build is broken.
+      - name: kit drift check
+        if: steps.scope.outputs.docs_only != 'true'
+        run: node scripts/kit-drift-check.mjs
+
+      - name: kit manifest unit tests
+        if: steps.scope.outputs.docs_only != 'true'
+        run: node scripts/kit-drift-check.test.mjs

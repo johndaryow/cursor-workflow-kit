@@ -24,8 +24,21 @@ disable-model-invocation: true
    - Exit tests CEO can understand without code
    - Dependencies on other programs (PLATFORM sequencing)
 5. When done, summarize **shared understanding** in 5 bullets and ask CEO to confirm.
-6. **Next step (new session):** `planning-session` skill → **PRD only** — no slices.
-7. **After PRD merges (another new session):** `slice-planning` skill → tracer bullets + chain wiring.
+6. When the CEO confirms, **write the grill artefact, merge it, and hand off** — see *Closing this session* below. Do not ask the CEO to compose the next prompt.
+7. The chain is grill → PRD → slices → execution. `npm run mc:handoff -- <program>` always knows which one is next.
+
+## Closing this session (do not leave it to the CEO)
+
+Canon: [`planning-chain-handoff.md`](../../rules/planning-chain-handoff.md).
+
+1. Docs-only PR → run the gate (`npm run mc:merge-verdict`) → **merge it yourself when green.**
+   The CEO does not review planning documents.
+2. `npm run mc:handoff -- <program>` — prints the next step's prompt, derived from the master doc's
+   `GRILL:` / `PRD:` / `SLICING:` lines. It **refuses** if the doc the next session must read is not
+   on `origin/main` yet; that refusal is the point, so fix the merge rather than the prompt.
+3. Offer to start the next session with `create_session` (ask once per conversation), or give the
+   CEO the prompt in one copyable block.
+4. Last line of the SESSION REPORT: `Next: <step> — <one sentence>. Prompt: npm run mc:handoff -- <program>`
 
 ## Anti-patterns
 

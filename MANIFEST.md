@@ -6,6 +6,53 @@ Everything you need to replicate the PP agent workflow in another repo — organ
 
 ---
 
+## Tier 0 — The kit is the source, and drift goes red
+
+Before this existed, the workflow was written once and then lived three times — in `pp-workspace`, in
+`pp-shopify-theme`, and here. Measured in code on 2026-08-19, not from memory: of **81 kit-owned
+paths, 20 were missing from the kit outright and 31 more had diverged**. A fourth repo started from
+the kit that day would have inherited the workflow from before the lessons that made it work.
+
+| File | npm script | Purpose |
+|------|------------|---------|
+| `kit-manifest.json` | — | **The contract.** A path listed here is owned by the kit; a path outside it belongs to the repo. |
+| `scripts/kit-drift-check.mjs` | `kit:drift` | Compares every kit-owned path against the local copy. Exits 1 on divergence, names the files **and which side is newer**. |
+| `scripts/kit-drift-check.test.mjs` | `test:kit-drift` | Unit tests, including the deploy-local guard below. |
+| `scripts/kit-manifest-build.mjs` | `kit:manifest` | Kit-only. Measures drift, pulls a live repo's newer copy across (`--apply`), installs the kit into a repo (`--install`). Never deletes. |
+| `optional/github-workflows/kit-drift.yml` | — | Runs on push and PR in every repo. Always reports; short-circuits **inside the job** on a `docs/`-only diff, never `paths-ignore`. |
+
+### Deploy steps stay repo-local
+
+The manifest deliberately excludes anything that pushes a storefront, an app, a bucket or a database —
+`firebase.json`, wrangler config, `scripts/deploy-*`, the Shopify theme guard. Universal is merging,
+permissions, reporting, the danger list, the retry loop, the router. `kit-drift-check.test.mjs` fails
+if a deploy-local path is ever added to the manifest.
+
+### Two classes of kit-owned file
+
+- **`hash`** — must be byte-identical everywhere. Rules, skills, the router and reporting scripts.
+- **`seed`** — the kit ships a starting copy for a **new** repo; an existing repo owns its own, so
+  neither bytes nor presence are checked. These are the scripts coupled to repo data: the slice ids
+  in `ralph-chain-config.mjs` and the program registry in `ralph-master-registry.mjs`, plus every
+  script that imports them. That closure is **derived in code**, not hand-listed — measured by
+  installing the kit into `pp-shopify-theme` and watching seven scripts fail on symbols its own
+  config does not export. Splitting the universal helpers out of the repo data is a later slice; this
+  one only stops pretending the coupling is not there.
+
+### Changing a workflow file
+
+Edit it **in the kit**, then:
+
+```bash
+node scripts/kit-manifest-build.mjs --from /path/to/pp-workspace --apply     # kit takes the change
+node scripts/kit-manifest-build.mjs --from /path/to/each-repo   --install    # every repo takes it back
+```
+
+Editing it in a repo is not forbidden — it is just no longer invisible. `kit:drift` names the file
+and says the repo moved.
+
+---
+
 ## Tier 1 — Required (minimum viable workflow)
 
 **You get this in `cursor/skills/` + `cursor/rules/` + User Rule (Cursor), and `claude/skills/` + `claude/rules/` + `CLAUDE.md` (Claude Code).**

@@ -1,8 +1,8 @@
 # Workflow core (Pocock · Claude Code)
 
-> Always-on rule. Import this file from your repo's root `CLAUDE.md` with `@claude/rules/workflow-core.md` (see `claude/CLAUDE.md` in this kit) so it loads on every session — the Claude Code equivalent of a Cursor `alwaysApply: true` rule.
+> Always-on rule — imported into `CLAUDE.md`. Claude Code twin of [`.cursor/rules/workflow-core.mdc`](../../.cursor/rules/workflow-core.mdc) — keep them in sync when you edit either. Canon: `docs/projects/workflow-master.md`.
 
-Matt Pocock's pattern adapted for **Claude Code** and a **non-developer CEO**. Same canon as the Cursor side: [`workflow-master.md`](../../docs/projects/workflow-master.md). This file is the Claude Code twin of [`cursor/rules/workflow-core.mdc`](../../cursor/rules/workflow-core.mdc) — keep them in sync when you edit either.
+Matt Pocock's pattern adapted for **Claude Code** and a **non-developer CEO**.
 
 ## Two modes
 
@@ -44,14 +44,78 @@ Every task ends with:
 2. PR + SESSION REPORT + plain-English assurance
 3. STATUS updated in same PR
 4. Auto-merge if AFK + green ([`auto-merge-policy.md`](./auto-merge-policy.md))
+4b. **Planning sessions:** merge your own docs-only PR when green, then hand off with
+   `npm run mc:handoff -- <program>` — never leave the CEO to compose the next prompt
+   ([`planning-chain-handoff.md`](./planning-chain-handoff.md))
+4c. **Execution sessions:** same principle, different script — end by printing the next slice's
+   exact prompt from `npm run mc:opener -- <program>` in the SESSION REPORT. **Never** end by
+   telling the CEO to type "Continue": it does not say which of 40+ programs to continue
+   ([`agent-chat-session.md`](./agent-chat-session.md))
 5. Post-merge scoped deploy + spot-check when UI/deploy touched
 6. Screenshots when UI-visible
 
-**Branch prefix:** Cursor branches use `cursor/<name>-<id>`; Claude Code branches use `claude/<name>-<id>`. Same STATUS dashboard, same slice ids — only the prefix differs, so both agents' branches are easy to tell apart in the PR list.
+**Branch prefix:** Cursor branches use `cursor/<name>-<id>`; Claude Code branches use `claude/<name>-<id>`. Same STATUS dashboard, same slice ids — only the prefix differs.
 
 **Default model:** see [`agent-discipline`](../skills/agent-discipline/SKILL.md) for the Claude model picks (Opus for planning, Sonnet for AFK execution) — the Claude Code equivalent of the Cursor Composer picks.
 
 Do **not** push to `main`. Do **not** deploy prod hosting/functions before merge unless CEO hotfix OK.
+
+### One push per slice — the CI bill is paid per push, not per hour
+
+**Every push fires six workflows** (`proof-live` ~4 min, `proof-baseline` ~3.6 min, `tsc-ratchet`, two
+edge guards, the Ralph chain test). A merge fires most of them again on `main`. So a slice costs
+roughly **35–40 runner-minutes**, and a slice pushed three times costs closer to seventy.
+
+Measured 2026-08-14, the day the account's Actions budget ran out mid-programme: 30 `proof-live` runs
+in one day, 18 of them on branches — i.e. **more pushes than slices**. The repo went dark for ten
+hours, every check failing in two seconds with no runner assigned, on `main` as well as on branches.
+
+So: **commit freely, push once.** Batch the doc update, the status update and the fix into the push
+that opens the PR. Push again only when a review or a red check demands it.
+
+### What the chain itself costs, and the one saving that is not a trim (2026-08-16)
+
+The chain pushes **three** times per slice, not one: the code, then `chore(status): reconcile after
+<slice> merge`, then `chore(status): claim <next> for the chain`. Two of those three change nothing
+but markdown under `docs/`.
+
+`proof baseline` and `proof live` had no `paths:` filter, so both were installing Chromium and
+building the app to prove that a table in a master doc still parses — roughly two thirds of the two
+heaviest workflows' runs. They now short-circuit on a **`docs/`-only diff**: the check still runs and
+still reports under the same name, it just skips the build. One line outside `docs/` puts the whole
+suite back.
+
+**This is not the trim the paragraph above forbids, and the difference matters.** A trim removes a
+gate's ability to say no about code. This removes nothing: no code reaches `main` without the suite
+having run on it. What changed is that a markdown edit stopped being asked to prove a browser.
+
+**`paths-ignore:` at the top of the file is the wrong way to do it** — tried and rejected the same
+day. `proof baseline` is in `REQUIRED_CHECK_NAMES` in `scripts/mc-auto-merge.mjs`, whose rule 3 is
+*"a REQUIRED check is absent entirely — zero checks is a failure, never a pass"*. A filtered-out
+workflow never reports at all, so every `chore(status)` PR would sit permanently unmergeable and the
+chain would stop dead. **A required check must always report.** Short-circuit inside the job; never
+filter the job away.
+
+Corollary, and it is load-bearing: **never smuggle a code change into a `chore(status):` commit.**
+It would skip the suite.
+
+### Serial is rarely what makes a programme slow
+
+Measured on FCN, 2026-08-15/16: slices running unattended finished in **~90 minutes each**. The one
+slice that took **10.5 hours** was the single `CEO_GATE: explicit_ok_in_chat` gate, waiting for a
+human who was asleep.
+
+So before reaching for parallel lanes — which double CI load, and which the `RALPH_RUNNING` claim
+exists to prevent after two agents once built one slice twice — **look at the gates**. Every SESSION
+REPORT should name the next CEO gate and how many slices away it is, so the CEO can pre-approve or
+the chain can be paced to land it in waking hours. That is worth more hours than parallelism, and
+costs no risk.
+
+**Do not "save minutes" by trimming the gates.** `proof-baseline.yml` states the reason in its own
+header — *"skipping a required check to save runner minutes is the same false green in a cheaper
+costume"* — and the `push: main` runs are not duplicates: a squash merge produces a tree no PR run
+ever tested, which is exactly when a silent breakage lands. The waste is in the number of pushes, not
+in the coverage. Fix the habit, keep the net.
 
 ## Paths
 
@@ -61,7 +125,7 @@ Do **not** push to `main`. Do **not** deploy prod hosting/functions before merge
 | Backend only | Merge → scoped deploy (`functions:<name>`, firestore, Edge) |
 | Mixed | Preview for UI + note post-merge function deploys |
 
-Preview: build → deploy preview channel for PR. Prod UI: your production URL.
+Preview: `tsc -b && npm run build` → `npm run deploy:hosting:preview -- pr-<n>`. Prod UI: https://work.perfectpresents.ph
 
 ## CEO role
 
@@ -92,19 +156,33 @@ CEO manual only: credential UI, DNS cutover, `CEO_GATE: explicit_ok_in_chat`, ca
 | `afk-slice` | Execute one AFK slice |
 | `ralph-loop` | Chain AFK slices (reference — see automation note below) |
 | `session-report` | CEO-readable PR closeout (tone: `ceo-communication.md`) |
+| — | **Between planning steps:** `npm run mc:handoff -- <program>` prints the next prompt and refuses across an unmerged doc ([`planning-chain-handoff.md`](./planning-chain-handoff.md)) |
 | `agent-discipline` | Token/cost + model/session picks every session |
 | `tdd` | Logic changes |
-| `design-system-first` | UI work (optional tier) |
+| `design-system-first` | UI work |
 | `improve-codebase` | Architecture planning |
 | `mc-status` | Where are we + chat rename before execution |
 | `handoff` | Rare — prefer fresh session per slice |
 
 ## Chaining slices (Ralph loop) — read this if you're used to Cursor's auto-chain
 
-Cursor's Ralph loop uses a GitHub Action that calls the **Cursor Cloud Agent API** to auto-launch the next agent after a merge. That API is Cursor-specific — Claude Code does not plug into it. In a Claude Code session:
+Both tools chain from the **same** `ralph-continue-on-merge.yml` and the same STATUS dashboard — you can continue a queue a Cursor agent started, and vice versa. Only the launch step differs, and one repo secret picks it:
 
-- The STATUS dashboard, `AFK_QUEUE`, and slice tags are **identical** — you can read/continue a queue that a Cursor agent started, and vice versa.
-- What does **not** carry over automatically: the "merge → auto-start next agent" GitHub Action step. After merging from Claude Code, either say **"Continue"** in a fresh Claude Code session (manual cold-start, same as `npm run mc:opener`) or use a Claude Code **Routine/scheduled trigger** to fire the next session automatically — see [`ralph-loop`](../skills/ralph-loop/SKILL.md) for the how-to.
+- `CLAUDE_ROUTINE_FIRE_URL` **not set** → merge launches a **Cursor Cloud Agent** (default).
+- `CLAUDE_ROUTINE_FIRE_URL` **set** → merge fires a **Claude Code routine** → fresh cloud session runs the next slice.
+
+The two launch steps are mutually exclusive, so **one merge** never starts two agents on one slice. Manual cold-start always works: paste the prompt from `npm run mc:opener -- <program>` into a fresh session. (**"Continue"** still works as a fallback the CEO may type — but an agent must never offer it in place of the real prompt: [`agent-chat-session.md`](./agent-chat-session.md).) Setup + trigger types: [`ralph-loop`](../skills/ralph-loop/SKILL.md).
+
+### One slice, one agent — the claim (added 2026-08-11)
+
+Mutual exclusion between *engines* was never the whole problem. **Two merges** were: on 2026-08-11 a slice PR and a one-line `chore(status):` follow-up to it merged ninety seconds apart, both planned the same next slice, and both launched. Two sessions built LAF-8 in parallel and one was discarded.
+
+Two guards now stand between a merge and a launch:
+
+1. **`isMaintenancePr` recognises housekeeping prefixes** — `docs:`, `chore:`, `ci:`, `build:`, `style:` — and bodies that say *"no code changes"* / *"status-only"* / *"follow-up to #N"*. A PR that really shipped a slice carries a SESSION REPORT and is exempted before this rule is reached, so widening the list cannot swallow real work.
+2. **The chain claims the slice before launching it** — `ralph-chain-claim.mjs` writes it into `RALPH_RUNNING` and pushes, and the launch steps run only when the claim was taken. The planner has always refused a slice already named there; until now nothing wrote the field, so the gate could never fire.
+
+The claim **fails closed**: an agent that dies leaves its slice held until that slice merges (reconcile clears it) or a person clears the line. A stalled chain is visible in `npm run mc:status`; a duplicated one is not, and costs a session. `npm run mc:ralph-health` checks both guards.
 
 ## Secrets (cloud)
 

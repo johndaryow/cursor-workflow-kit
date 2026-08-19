@@ -30,8 +30,41 @@ Cursor may not auto-rename the UI — still print the line every time so the CEO
 | CEO says | Agent does |
 |----------|------------|
 | **Where are we in workers migration?** / **Migration status?** | Run `npm run mc:status -- platform`. Reply plain English: Lane B status, GCP count, recommended slice, chat rename. **Do not** start new work unless asked. |
-| **Continue** / **Continue where we left off** / **Resume migration** | Run `mc:status` → print **Chat name** → run `npm run mc:opener -- platform` logic (read NEXT_PROMPT / first `AFK_QUEUE` slice) → execute that slice per `afk-slice` skill. |
+| **Continue** / **Continue where we left off** / **Resume migration** | Fallback, still honoured: run `mc:status` → print **Chat name** → run `npm run mc:opener -- <program>` (read NEXT_PROMPT / first `AFK_QUEUE` slice) → execute that slice per `afk-slice` skill. If the CEO named no program, use `ACTIVE_PROGRAM` and say which one you picked. |
 | **Start W6d** (or any slice id) | Print chat name for that slice → execute §12 block for that slice only. |
+
+## Never offer "Continue" — print the prompt
+
+`Continue` is a **fallback the CEO may type**, not something an agent may hand back. The STATUS
+dashboards span 40+ programs; "Continue" does not say which one, so it hands the CEO a decision the
+repo already recorded.
+
+[`planning-chain-handoff.mdc`](./planning-chain-handoff.mdc) settled this for planning: derive the next
+prompt with `npm run mc:handoff`, never hand-write it, never substitute a magic word. **Execution
+follows the same rule**, with `mc:opener` as its script:
+
+```bash
+npm run mc:opener -- <program>
+```
+
+It prints the exact, pasteable prompt for that program's recommended slice — chat name, master doc,
+slice id, autonomy — and it emits **your** tool's rule paths (`.cursor/rules/*.mdc` in a Cursor chat,
+`.claude/rules/*.md` in Claude Code). `--json` gives the same thing machine-readable for
+`create_session`.
+
+So whenever a session queues or finishes execution work:
+
+1. Run `npm run mc:opener -- <program>` and put what it prints in the SESSION REPORT, in a fenced
+   block the CEO can copy in one click.
+2. Where the `claude-code-remote` MCP tools exist, offer to start that session rather than only
+   printing the prompt — same `source_url` rule as planning
+   ([`planning-chain-handoff.mdc`](./planning-chain-handoff.mdc) §3).
+3. Name the program in every next-step line. `Next: npm run mc:opener -- ppe-payg` is an instruction;
+   `Next: say Continue` is a guess.
+
+**Still true:** if the CEO does type `Continue` in a fresh session, honour it — read STATUS, print the
+chat name, run the recommended slice. Keeping the fallback costs nothing. Offering it in place of the
+real prompt is the defect.
 
 ## Execution preflight (add to first 60 seconds)
 

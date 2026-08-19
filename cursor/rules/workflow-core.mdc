@@ -47,6 +47,12 @@ Every task ends with:
 2. PR + SESSION REPORT + plain-English assurance
 3. STATUS updated in same PR
 4. Auto-merge if AFK + green ([`auto-merge-policy.mdc`](./auto-merge-policy.mdc))
+4b. **Planning sessions:** hand off with `npm run mc:handoff -- <program>` — never leave the CEO to
+   compose the next prompt ([`planning-chain-handoff.mdc`](./planning-chain-handoff.mdc))
+4c. **Execution sessions:** same principle, different script — end by printing the next slice's exact
+   prompt from `npm run mc:opener -- <program>` in the SESSION REPORT. **Never** end by telling the
+   CEO to type "Continue": it does not say which of 40+ programs to continue
+   ([`agent-chat-session.mdc`](./agent-chat-session.mdc))
 5. Post-merge scoped deploy + spot-check when UI/deploy touched
 6. Screenshots when UI-visible
 
@@ -62,7 +68,7 @@ Do **not** push to `main`. Do **not** deploy prod hosting/functions before merge
 | Backend only | Merge → scoped deploy (`functions:<name>`, firestore, Edge) |
 | Mixed | Preview for UI + note post-merge function deploys |
 
-Preview: build → deploy preview channel for PR. Prod UI: your production URL.
+Preview: `tsc -b && npm run build` → `npm run deploy:hosting:preview -- pr-<n>`. Prod UI: https://work.perfectpresents.ph
 
 ## CEO role
 
@@ -105,7 +111,8 @@ CEO manual only: credential UI, DNS cutover, `CEO_GATE: explicit_ok_in_chat`, ca
 1. STATUS `AFK_QUEUE` in master doc
 2. **Morning automation** — brief + optional auto-start when gates pass
 3. **Ralph continue on merge** — after S6b PR merges, auto-start next Lane A batch ([`workflow-cursor-automations.md`](../../docs/projects/workflow-cursor-automations.md))
-4. `npm run mc:opener` or CEO: `Resume migration today` — manual kickoff / unblock
+4. `npm run mc:opener -- <program>` — manual kickoff / unblock. Always pass the program, and hand the
+   CEO the prompt it prints, never the word "Continue" ([`agent-chat-session.mdc`](./agent-chat-session.mdc))
 5. Auto-merge when policy allows
 
 ## Secrets (cloud)

@@ -21,6 +21,7 @@ export function parseDashboardFields(dashboardText) {
     activeProgram: get('ACTIVE_PROGRAM'),
     activeSlice: get('ACTIVE_SLICE'),
     blockedBy: get('BLOCKED_BY'),
+    ralphChain: get('RALPH_CHAIN') || 'auto',
     afkQueue,
     nextPrompt: get('NEXT_PROMPT'),
     lastMergedPr: get('LAST_MERGED_PR'),

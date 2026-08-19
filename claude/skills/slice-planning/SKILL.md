@@ -109,9 +109,23 @@ Fix registry gaps before merge.
 
 ## After merge
 
-CEO or chain cold-start: `Start {first-slice-id}` or `npm run mc:opener -- {program}`
+Planning is complete, so `npm run mc:handoff -- {program}` now points at **execution** and defers to
+`npm run mc:opener -- {program}` for that prompt. CEO or chain cold-start: `Start {first-slice-id}`.
 
 Execution: `afk-slice` skill — one fresh agent session per slice (works from either Cursor or Claude Code — same STATUS dashboard).
+
+## Closing this session (do not leave it to the CEO)
+
+Canon: [`planning-chain-handoff.md`](../../rules/planning-chain-handoff.md).
+
+1. Docs-only PR → run the gate (`npm run mc:merge-verdict`) → **merge it yourself when green.**
+   The CEO does not review planning documents.
+2. `npm run mc:handoff -- <program>` — prints the next step's prompt, derived from the master doc's
+   `GRILL:` / `PRD:` / `SLICING:` lines. It **refuses** if the doc the next session must read is not
+   on `origin/main` yet; that refusal is the point, so fix the merge rather than the prompt.
+3. Offer to start the next session with `create_session` (ask once per conversation), or give the
+   CEO the prompt in one copyable block.
+4. Last line of the SESSION REPORT: `Next: <step> — <one sentence>. Prompt: npm run mc:handoff -- <program>`
 
 ## Model
 

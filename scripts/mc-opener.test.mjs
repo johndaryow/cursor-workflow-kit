@@ -10,6 +10,7 @@ import {
   masterDocRelPath,
   buildOpener,
 } from './mc-opener.mjs';
+import { sliceIdFromDashboardValue, chatRenameFromMaster } from './mc-chat-meta.mjs';
 
 const always = () => true;
 
@@ -123,5 +124,37 @@ describe('buildOpener', () => {
     assert.match(out, /Execute slice \*\*PPE-PAYG-1\*\*/);
     assert.match(out, /AUTONOMY: AFK/);
     assert.match(out, /\*\*Chat name:\*\* PPE-PAYG PPE-PAYG-1/);
+  });
+});
+
+describe('sliceIdFromDashboardValue — dashboards write ids with markdown around them', () => {
+  it('strips bold and the trailing sentence, leaving the bare id', () => {
+    assert.equal(
+      sliceIdFromDashboardValue('**LACC-20** (canary the new aligner) — its gate is satisfied'),
+      'LACC-20',
+    );
+  });
+
+  it('strips backticks and underscores too', () => {
+    assert.equal(sliceIdFromDashboardValue('`W6d`'), 'W6d');
+    assert.equal(sliceIdFromDashboardValue('_RH1_ do the thing'), 'RH1');
+  });
+
+  it('leaves a bare id alone', () => {
+    assert.equal(sliceIdFromDashboardValue('LACC-20'), 'LACC-20');
+  });
+
+  it('returns empty for missing input rather than throwing', () => {
+    assert.equal(sliceIdFromDashboardValue(undefined), '');
+    assert.equal(sliceIdFromDashboardValue(''), '');
+  });
+});
+
+describe('chatRenameFromMaster — an emphasised id must never reach new RegExp raw', () => {
+  it('does not throw on an id carrying regex metacharacters', () => {
+    // `**LACC-20**` used to be interpolated unescaped into the exit-plan row regex, where the
+    // leading `*` is a quantifier with nothing to repeat — the whole script died (2026-08-20).
+    assert.doesNotThrow(() => chatRenameFromMaster('# doc\n', '**LACC-20**'));
+    assert.doesNotThrow(() => chatRenameFromMaster('# doc\n', 'A+B'));
   });
 });

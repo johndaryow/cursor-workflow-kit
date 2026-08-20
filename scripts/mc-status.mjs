@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   parseDashboardFields,
   chatRenameFromMaster,
+  sliceIdFromDashboardValue,
   workersMigrationSummary,
 } from './mc-chat-meta.mjs';
 
@@ -52,7 +53,7 @@ const dashboard =
 const fields = parseDashboardFields(dashboard);
 const sliceForRename =
   fields.activeSlice && !fields.activeSlice.startsWith('none')
-    ? fields.activeSlice.split(/\s+/)[0]
+    ? sliceIdFromDashboardValue(fields.activeSlice)
     : fields.recommendedSlice;
 const chatRename = chatRenameFromMaster(text, sliceForRename);
 

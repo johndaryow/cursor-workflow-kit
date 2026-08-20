@@ -9,6 +9,21 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
+/**
+ * Pull the bare slice id out of a dashboard value.
+ *
+ * Dashboards write the id with markdown emphasis and a trailing sentence —
+ * `ACTIVE_SLICE: **LACC-20** (canary the new aligner) — its gate is satisfied`. The regexes below
+ * need `LACC-20`. Left unstripped, `**LACC-20**` misses every `### LACC-20` section and then reaches
+ * a `new RegExp` as `**LACC-20**`, where the leading `*` is a quantifier with nothing to repeat and
+ * the whole script dies with `SyntaxError: Nothing to repeat` (hit on LYRIC-ACC, 2026-08-20).
+ */
+export function sliceIdFromDashboardValue(value) {
+  const firstToken = String(value ?? '').trim().split(/\s+/)[0] ?? '';
+  const unemphasised = firstToken.replace(/^[*_`~]+/, '').replace(/[*_`~]+$/, '');
+  return unemphasised.replace(/[^A-Z0-9-].*$/i, '');
+}
+
 /** @param {string} dashboardText */
 export function parseDashboardFields(dashboardText) {
   const get = (key) =>
@@ -25,7 +40,7 @@ export function parseDashboardFields(dashboardText) {
     afkQueue,
     nextPrompt: get('NEXT_PROMPT'),
     lastMergedPr: get('LAST_MERGED_PR'),
-    recommendedSlice: afkQueue[0]?.replace(/[^A-Z0-9-]+.*$/i, '') ?? '',
+    recommendedSlice: sliceIdFromDashboardValue(afkQueue[0]),
   };
 }
 
@@ -48,7 +63,7 @@ export function chatRenameFromMaster(masterText, sliceId) {
   if (existsSync(exitPlanPath)) {
     const exitPlan = readFileSync(exitPlanPath, 'utf8');
     const rowRe = new RegExp(
-      `\\|\\s*\\*\\*${sliceId}\\*\\*\\s*\\|[^|]+\\|\\s*\`([^\`]+)\`\\s*\\|`,
+      `\\|\\s*\\*\\*${escaped}\\*\\*\\s*\\|[^|]+\\|\\s*\`([^\`]+)\`\\s*\\|`,
       'i',
     );
     const fromTable = exitPlan.match(rowRe)?.[1]?.trim();

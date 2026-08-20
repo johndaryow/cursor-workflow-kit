@@ -449,8 +449,8 @@
       "repoPath": "scripts/mc-chat-meta.mjs",
       "kind": "script",
       "check": "hash",
-      "sha256": "a295d0cfa08b8934747d4b2705245acdbd33b5f9ca59ac00add44bb3ffabe01e",
-      "updatedAt": "2026-08-18T14:01:07+00:00"
+      "sha256": "a93ce8a1770e37c4b76b6a875ae771e77bfc637054583df06e479ec47fe296b8",
+      "updatedAt": "2026-08-20T03:00:18+00:00"
     },
     {
       "kitPath": "scripts/mc-merge-blocked.mjs",
@@ -481,8 +481,8 @@
       "repoPath": "scripts/mc-opener.test.mjs",
       "kind": "script",
       "check": "hash",
-      "sha256": "af4b8781fae20ec11abb4c3602a4af75dd812fbd04b4d4a7ac94cb3ba42fc9c0",
-      "updatedAt": "2026-08-19T21:43:51+08:00"
+      "sha256": "e475abb3cc1277ab6a6a45f7d8c0c5fb3db500aab75e921eda03dc928739f50e",
+      "updatedAt": "2026-08-20T03:00:18+00:00"
     },
     {
       "kitPath": "scripts/mc-planning-handoff.mjs",
@@ -545,8 +545,8 @@
       "repoPath": "scripts/mc-status.mjs",
       "kind": "script",
       "check": "hash",
-      "sha256": "d712b714255911fe5656aa039284fda1e259507b3beb8cee1f503f9d2f4ca86e",
-      "updatedAt": "2026-08-18T14:01:07+00:00"
+      "sha256": "5bca372777fbea05b4a7918404b65c4fb2e12405e20f01b64418578f29b008f1",
+      "updatedAt": "2026-08-20T03:00:18+00:00"
     },
     {
       "kitPath": "scripts/ralph-chain-config.mjs",

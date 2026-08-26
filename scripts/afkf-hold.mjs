@@ -175,6 +175,27 @@ export function earliestReleaseDay({ recordedDays, divergentDays = [], now = new
 }
 
 /**
+ * The slice ids a cold start could hand a session, from its dashboard fields.
+ *
+ * Exported and pure because the previous version of this lived inline in `mc-status.mjs` and its
+ * test re-implemented the same string munging alongside it — so the test passed while the real
+ * candidate was dead. `NEXT_PROMPT: §11 · AFKF-18` reduces to `""` unless the section prefix comes
+ * off first, and a test that strips the prefix itself proves only that stripping works.
+ *
+ * @param {{ activeSlice?: string, recommendedSlice?: string, afkQueue?: string[], nextPrompt?: string }} fields
+ * @param {(v: string) => string} sliceIdOf
+ */
+export function holdCandidates(fields, sliceIdOf) {
+  const strip = (v) => sliceIdOf(String(v ?? '').replace(/^\s*§\S*\s*[·→-]?\s*/, ''));
+  return [
+    strip(fields?.activeSlice),
+    fields?.recommendedSlice ?? '',
+    strip(fields?.afkQueue?.[0]),
+    strip(fields?.nextPrompt),
+  ].filter(Boolean);
+}
+
+/**
  * The first HELD slice among the ones a cold start could hand a session, or `null`.
  *
  * WHY A LIST AND NOT "THE" SLICE (critic finding, round three).

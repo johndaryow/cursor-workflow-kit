@@ -111,7 +111,7 @@ console.log(`RECOMMENDED_SLICE: ${sliceForRename || 'none'}`);
  */
 {
   try {
-    const { firstHeldOf, evaluateKnownGates } = await import('./afkf-hold.mjs');
+    const { firstHeldOf, holdCandidates, evaluateKnownGates } = await import('./afkf-hold.mjs');
     const { holdsFromLiveDocs } = await import('./afkf-chain-queue.mjs');
     /**
      * EVERY slice this dashboard could hand a session, not just the one it renames the chat after.
@@ -119,12 +119,7 @@ console.log(`RECOMMENDED_SLICE: ${sliceForRename || 'none'}`);
      * `NEXT_PROMPT` name what a session would START. Checking only the first printed `HOLD: none`
      * directly above a recommendation to begin held work.
      */
-    const candidates = [
-      sliceForRename,
-      fields.recommendedSlice,
-      sliceIdFromDashboardValue(fields.afkQueue?.[0] ?? ''),
-      sliceIdFromDashboardValue(fields.nextPrompt ?? ''),
-    ];
+    const candidates = holdCandidates(fields, sliceIdFromDashboardValue);
     const held = firstHeldOf(candidates, holdsFromLiveDocs(), (await evaluateKnownGates()).gates);
     console.log(`HOLD: ${held ? `HELD ${held.slice} — ${held.reason}` : 'none'}`);
   } catch (err) {

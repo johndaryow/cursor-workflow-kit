@@ -67,6 +67,18 @@ export const UNIVERSAL_SCRIPT_EXTRAS = [
    * message rather than at load time with a broken script.
    */
   'afkf-hold.mjs',
+  /**
+   * The DYNAMIC imports too, round four. Only the static closure shipped, and `mc-status.mjs`
+   * reaches `afkf-chain-queue.mjs` through `await import()` — which failed in a kit-seeded repo,
+   * printed `HOLD: unknown`, and `mc-opener` read anything that was not a well-formed HELD line as
+   * clear. The gate's default state in a fresh repo was OFF. `mc-opener` fails closed on that now,
+   * but a gate that cannot evaluate is a gate nobody trusts, so the modules ship.
+   */
+  'afkf-chain-queue.mjs',
+  'afkf-chat.mjs',
+  'afkf-chain-divergence.mjs',
+  'afkf-chain-state.mjs',
+  'afkf-chain-import.mjs',
   // NOT `afkf-hold.test.mjs`: it asserts against this repo's own master doc, workflow and
   // dashboard, and it imports the queue, which is repo data. The gate is universal; its
   // regression tests are not.

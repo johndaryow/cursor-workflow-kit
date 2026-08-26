@@ -253,11 +253,34 @@ async function runOpener() {
    * of the same question is how they came to disagree, so there is one — `mc-status` checks every
    * slice its dashboard could hand over, prints the verdict, and this obeys the line.
    */
-  const holdLine = statusOut.match(/^HOLD:\s*(.+)$/m)?.[1]?.trim() ?? 'none';
-  const heldMatch = /^HELD\s+(\S+)\s+—\s+([\s\S]+)$/.exec(holdLine);
+  const holdLine = statusOut.match(/^HOLD:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  const heldMatch = holdLine && /^HELD\s+(\S+)\s+—\s+([\s\S]+)$/.exec(holdLine);
+
+  /**
+   * ONLY THE LITERAL WORD `none` MEANS NOT HELD. Everything else is held.
+   *
+   * The first version of this parse accepted a well-formed `HELD …` and treated EVERY other shape
+   * as clear — including `mc-status`'s own `HOLD: unknown — could not evaluate (…)`, which is what
+   * it prints when the gate could not be read at all. So the one case the whole design promises
+   * resolves to HELD resolved to "start the slice", and a kit-seeded repo hits it by default.
+   *
+   * That was a REGRESSION introduced by moving the verdict from an evaluation to a parsed line:
+   * `evaluateKnownGates` swallows its own errors into an absent gate and `evaluateHold` reads
+   * absent as held, so the version this replaced was fail-closed for free. Reading a line instead
+   * of computing one is only safe if the reader defaults the way the computation would.
+   */
   const hold = heldMatch
     ? { held: true, slice: heldMatch[1], reason: heldMatch[2] }
-    : { held: false, slice: null, reason: '' };
+    : holdLine === 'none'
+      ? { held: false, slice: null, reason: '' }
+      : {
+          held: true,
+          slice: null,
+          reason:
+            holdLine === null
+              ? 'mc:status printed no HOLD line — the gate could not be read, and unread is not clear'
+              : `mc:status could not evaluate the hold: ${holdLine}`,
+        };
 
   const opener = buildOpener({
     agent,

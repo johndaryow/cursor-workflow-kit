@@ -28,7 +28,7 @@ Deploy steps stay repo-local and are excluded on purpose — see MANIFEST.md, Ti
 
 Tell your agent: **“Update workflow from central kit”**
 
-This lays down `.cursor/skills/`, `.cursor/rules/`, `.claude/skills/`, `.claude/rules/`, and `CLAUDE.md` (if you don't already have one) in the target repo.
+This lays down `AGENTS.md` (the one always-on rulebook, read by Claude Code, Cursor and Codex), `docs/rules/` (one copy of each rule, read on demand), `.claude/skills/` with `.cursor/skills` and `.agents/skills` symlinked to it, and thin `CLAUDE.md` / `.cursor/rules/000-agents.mdc` pointers.
 
 ## Ralph GitHub Actions
 

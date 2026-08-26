@@ -66,16 +66,21 @@ planned — clear exit tests, tags, `ON_FAIL: stop`. AFK means planning is done,
 
 **Ending a slice:**
 
+0. `npm run preflight` — **green before you push.** The fourteen checks that used to run on every
+   pull request run here now ([`preflight.md`](docs/rules/preflight.md)).
+0b. **A fresh critic rules on it** — a subagent with no memory of building it, MEETS or DOES NOT
+   MEET the bar. You never judge your own work ([`critic.md`](docs/rules/critic.md)).
 1. Branch pushed — `claude/<name>-<id>`, `cursor/<name>-<id>`, or `codex/<name>-<id>`.
 2. SESSION REPORT in the **PR body** — never in chat ([`reporting.md`](docs/rules/reporting.md)).
 3. STATUS updated in the **same** PR.
 4. Merge when green ([`merging.md`](docs/rules/merging.md)).
 5. Scoped deploy + spot-check if UI or deploy was touched. Screenshots if UI-visible.
 
-**Commit freely, push once.** Every push fires six workflows — ~35–40 runner-minutes per slice. Batch
-the doc update, the status update and the fix into the push that opens the PR. Push again only when a
-review or a red check demands it. Never smuggle a code change into a `chore(status):` commit — it skips
-the suite.
+**Commit freely, push once.** Nothing fires on a push any more — the checks run in your session via
+`npm run preflight`, and GitHub keeps only what must run when no session exists: the chain launcher,
+one guard on `main` after the squash, and the scheduled jobs. Still batch the doc update, the status
+update and the fix into one push; a push is cheap now, but a half-finished PR is not. **Never smuggle
+a code change into a `chore(status):` commit** — `main-guard` skips docs-only merges by design.
 
 Do **not** push to `main`. Do **not** deploy production before merge unless the CEO says hotfix.
 
@@ -110,6 +115,8 @@ Before a bulk write, a plan upgrade or always-on infra: [`cost-estimate-before-a
 
 | When | Read |
 |---|---|
+| Before every push | [`preflight.md`](docs/rules/preflight.md) — `npm run preflight` |
+| Before merging anything that changed behaviour | [`critic.md`](docs/rules/critic.md) + `/critic` |
 | Merging a PR, or it will not merge | [`merging.md`](docs/rules/merging.md) |
 | Closing a slice, writing a PR body, the digest | [`reporting.md`](docs/rules/reporting.md) |
 | Grill / PRD / slice planning, or handing off | [`planning-chain.md`](docs/rules/planning-chain.md) |
@@ -129,4 +136,4 @@ rulebook does not index is a rule nobody finds.
 Claude Code: `.claude/skills/` · Cursor: `.cursor/skills/` (same files) · invoke with `/name`.
 
 `/grill-me` → `/planning-session` → `/slice-planning` → `/afk-slice`. Plus `/session-report`,
-`/mc-status`, `/tdd`, `/improve-codebase`, `/agent-discipline`, `/handoff`, `/ralph-loop`.
+`/critic`, `/mc-status`, `/tdd`, `/improve-codebase`, `/agent-discipline`, `/handoff`, `/ralph-loop`.

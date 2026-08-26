@@ -25,6 +25,13 @@ description: Executes one AFK slice from master doc STATUS and NEXT_PROMPT — v
 
 ## End
 
+0. **`npm run preflight`** — the fourteen checks a pull request used to run. Green before you push;
+   a push that skipped it is a push nobody checked. It prints what it skipped — repeat that in the
+   report ([`preflight.md`](../../../docs/rules/preflight.md)).
+0b. **Fresh critic** — `/critic`. A subagent with no memory of building this rules MEETS or DOES NOT
+   MEET the bar (the §12 exit tests + the CEO's words). You never judge your own diff in this
+   session. Skip only for docs-only/status changes, and say so
+   ([`critic.md`](../../../docs/rules/critic.md)).
 1. Update STATUS DASHBOARD + scorecard in **same PR**
 2. **Commit → push → then PR:** `git push -u origin <branch>` before opening the PR. Run `npm run mc:slice-closeout -- --branch <branch>` then verify GitHub auth if PR creation fails (Claude Code: check the GitHub MCP connection; Cursor: `npm run github:auth-check`).
 3. PR description: SESSION REPORT ([`session-report-format.md`](../../../docs/rules/reporting.md)) — **must include** `Slice: <machine-id>` (e.g. `RH13`, `W18`)
@@ -40,6 +47,9 @@ description: Executes one AFK slice from master doc STATUS and NEXT_PROMPT — v
 9. **Chain:** see [`ralph-loop`](../ralph-loop/SKILL.md) for how the next slice gets picked up — mechanism differs between Cursor (GitHub Action → Cloud Agent) and Claude Code (the cold-start prompt above or a scheduled Routine). **Do not** trigger the next agent yourself from inside the slice session (duplicate risk).
 
 ## MUST NOT
+
+- **Push without a green `npm run preflight`** — nothing on GitHub re-checks a PR any more
+- **Judge your own diff** instead of spawning a fresh critic — same context, same blind spot
 
 - Expand scope beyond MUST NOT lines in prompt
 - Advance queue on FAIL

@@ -104,10 +104,10 @@ fi
 
 echo ""
 echo "Done. Next steps:"
-echo "  1. Merge templates/package-scripts.json into package.json (includes kit:drift)"
+echo "  1. Merge templates/package-scripts.json into package.json (includes kit:drift + preflight)"
 echo "  2. Cursor: paste User Rule from docs/projects/workflow-user-rules-canonical.md"
 echo "  3. Fill in section 6 of AGENTS.md — the repo-specific facts"
 echo "  4. Rename docs/projects/my-program-master.md → your-program-master.md"
 echo "  5. Trim scripts/ralph-chain-config.mjs for your slice ids"
-echo "  6. Run 'npm run kit:drift' — it must print OK before you start work"
+echo "  6. Run 'npm run kit:drift' and 'npm run preflight' — both must be green before you start work"
 echo "  7. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on a cloud VM) — see skills/ralph-loop/SKILL.md"

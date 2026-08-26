@@ -42,6 +42,13 @@ What shipped:
 Exit tests:
 - Exit — <name>: PASS | FAIL (<note>)
 
+Preflight:
+- <n> passed, <n> failed, <n> skipped — name what was skipped, never let a skip read as a pass
+
+Critic:
+- Lens A (exit tests): MEETS | DOES NOT MEET → <gap> → fixed → MEETS round 2
+- Lens B (production risk): MEETS | skipped (<why>)
+
 Merge:
 - PR #<n>: auto-merged | pending | blocked
 
@@ -67,6 +74,10 @@ Next slice:
 - `Slice:` must be a **machine id** — the chain reads it to advance the queue.
 - One line per exit test.
 - `CEO action needed: none` when the chain continues automatically.
+- **A skipped check is reported, not omitted.** `npm run preflight` skips the browser suite by
+  default and says so; repeat that here. Silent truncation reads as "covered everything".
+- **The critic's verdict goes here even when it was skipped**, with the reason. A critic step
+  nobody can see in the report did not happen.
 - **Report the net production line delta as a number, in whichever direction it lands.** It is a smoke
   alarm, not a verdict — see [`planning-chain.md`](./planning-chain.md#net-lines-is-a-measurement).
 - Link the preview URL when UI changed.

@@ -22,5 +22,6 @@
   "test:ralph-chain": "node scripts/ralph-chain.test.mjs",
   "test:ralph-claim": "node scripts/ralph-chain-claim.test.mjs",
   "test:ralph-fire-claude": "node scripts/ralph-chain-fire-claude.test.mjs",
-  "test:ralph-launch": "node scripts/ralph-chain-launch.test.mjs"
+  "test:ralph-launch": "node scripts/ralph-chain-launch.test.mjs",
+  "preflight": "node scripts/preflight.mjs"
 }

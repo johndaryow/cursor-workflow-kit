@@ -200,3 +200,55 @@ which five existed only to overrule another. Separately, **66% of the last 30 da
 **Rule that came from it:** one rulebook (`AGENTS.md`), one copy of every rule body (`docs/rules/`), read
 by all three agents. A disagreement is now resolved by deleting the loser, because the source is always
 reachable.
+
+---
+
+## The checks were fine; running them twice was not
+
+**2026-08-26.** Six workflows fired on every push — `proof-live`, `proof-baseline`,
+`tsc-error-ratchet`, two edge guards, the chain test — about **35–40 runner-minutes a slice**,
+re-running tests the agent session had already run on the same commit minutes earlier. Separately,
+`stale-green-pr-watch` ran **hourly**: 720 runs a month, each billed at GitHub's one-minute minimum,
+to ask whether anything was stuck.
+
+Actions minutes are metered on **private** repositories and unlimited on public ones. The account
+ran out. Every check began failing in **two seconds with no runner assigned** — and the proof it was
+not the code was that `cursor-workflow-kit`, the one **public** repo, passed the same checks on the
+same commit at the same minute.
+
+**A job earns a place on GitHub only if it must run when no agent session exists.** By that test:
+
+- The chain launcher stays — it starts the next session on merge, and nothing is alive then.
+- `main-guard` stays — a squash merge produces a tree **no PR run ever tested**.
+- The nightly live health check, the daily digest and the FM soak stay — nobody is here.
+- The hourly watcher went to **daily**: it is a backstop, not the merge path, and a day is soon
+  enough for a backstop.
+- The fourteen per-PR checks moved into `npm run preflight`.
+
+**What that spends, stated plainly:** CI's real gift was never the tests — it was that it did not
+take the agent's word for it. Two things buy that back: preflight **prints what it skipped**, so a
+skip can never read as a pass, and `main-guard` still runs on a clean machine after the squash.
+
+## Nobody was ever checking whether the work was any good
+
+**2026-08-26.** The same review found a gap that no amount of CI would have closed: **the agent
+built the work, reviewed the work, and reported on the work.** Tests answer *"does it run?"* — a
+fact. Nothing was answering *"is it right?"* — a judgement.
+
+The two are not substitutes. On this very slice, a renamed directory broke `isKitRoot()`: a check
+that silently looked in the wrong place and called all fifty kit-owned files missing. The unit test
+agreed with the bug, because it built a fixture matching whatever the heuristic expected. What
+caught it was a machine **running** the check. A critic reading the diff might have caught it by
+reasoning — neither would have caught it alone, and neither replaces the other.
+
+**Rule that came from it:** [`critic.md`](./critic.md) — a subagent with no memory of the building
+rules **MEETS** or **DOES NOT MEET** the bar, before the merge. Adapted from the gauntlet loop
+(Matt Shumer), with one deliberate change: that pattern compares against a **reference product**,
+which works for *"as good as Call of Duty"* and fails for *"did the payroll save"* — with no
+reference, a critic invents an arbitrary standard and burns tokens defending it. **Here the bar is
+the slice's own exit tests and the CEO's own words**, both written before the work started, which
+is what makes them a bar rather than a mood.
+
+A pick, never a score: scores drift upward every round — 7, then 7.5, then "8, good enough" — and
+nothing ever fails. Two rounds, then stop: a third round optimises the critic's opinion rather than
+the work.

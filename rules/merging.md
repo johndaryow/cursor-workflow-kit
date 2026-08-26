@@ -22,12 +22,22 @@ on a PR whose four checks went green in 49 seconds ([history](./history.md#the-h
 `npm run mc:merge-verdict -- <n>` **does not fetch that PR.** It judges only checks handed to it on
 stdin or `--file`. Use `mc:auto-merge` when you want fetching.
 
+## "Green" changed meaning on 2026-08-26
+
+A pull request no longer runs the fourteen checks — `npm run preflight` did, in the session, on the
+same commit ([`preflight.md`](./preflight.md)). So on a PR, **green means preflight was green and a
+fresh critic said MEETS** ([`critic.md`](./critic.md)), both recorded in the PR body.
+
+`main-guard` then re-runs preflight on `main` after the squash, on a clean machine — because a
+squash produces a tree no PR run ever tested. A PR carrying no checks is now **normal**, not a
+refusal; `--wait` still applies to the checks that do exist.
+
 ## May auto-merge — all of these
 
 1. `AUTONOMY: AFK` on the slice
 2. `MERGE_POLICY: auto_when_green`
 3. Every exit test PASS (or a documented pre-existing red with zero new failures)
-4. Plain-English assurance in the PR body
+4. Plain-English assurance in the PR body, **including the preflight counts and the critic's verdict**
 5. STATUS updated in the same PR
 6. Not on the stop list
 

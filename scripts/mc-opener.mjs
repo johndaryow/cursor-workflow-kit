@@ -161,10 +161,11 @@ export function buildOpener({
    * slice, not an explanation of why this one is stuck.
    */
   if (hold?.held) {
+    const heldSlice = hold.slice ?? recommendedSlice;
     return [
       `**Chat name:** ${chatRename}`,
       '',
-      `**${recommendedSlice} is HELD — do not start it.**`,
+      `**${heldSlice} is HELD — do not start it.**`,
       '',
       hold.reason,
       '',
@@ -174,7 +175,7 @@ export function buildOpener({
       '  npm run afkf:chain-queue',
       '',
       'When can it start? The check answers, not a date in a document:',
-      `  npm run afkf:hold-check -- ${recommendedSlice}`,
+      `  npm run afkf:hold-check -- ${heldSlice}`,
     ].join('\n');
   }
 
@@ -243,10 +244,20 @@ async function runOpener() {
   const fields = parseDashboardFields(dashboard);
   const nextPrompt = fields.nextPrompt || '§12';
 
-  // AFKF-18b — one read, and a slice this refuses is a slice no session is handed.
-  const { evaluateHold, evaluateKnownGates } = await import('./afkf-hold.mjs');
-  const { holdsFromLiveDocs } = await import('./afkf-chain-queue.mjs');
-  const hold = evaluateHold(holdsFromLiveDocs()[recommendedSlice] ?? null, (await evaluateKnownGates()).gates);
+  /**
+   * AFKF-18b — the verdict comes from `mc-status`, which this already spawned, rather than from a
+   * second evaluation here.
+   *
+   * The first version re-derived it from `recommendedSlice` alone, and that is the field that was
+   * wrong: `ACTIVE_SLICE` names a finished slice while the queue head is the held one. Two readers
+   * of the same question is how they came to disagree, so there is one — `mc-status` checks every
+   * slice its dashboard could hand over, prints the verdict, and this obeys the line.
+   */
+  const holdLine = statusOut.match(/^HOLD:\s*(.+)$/m)?.[1]?.trim() ?? 'none';
+  const heldMatch = /^HELD\s+(\S+)\s+—\s+([\s\S]+)$/.exec(holdLine);
+  const hold = heldMatch
+    ? { held: true, slice: heldMatch[1], reason: heldMatch[2] }
+    : { held: false, slice: null, reason: '' };
 
   const opener = buildOpener({
     agent,

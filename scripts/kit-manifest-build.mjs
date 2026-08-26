@@ -53,6 +53,26 @@ export const UNIVERSAL_SCRIPT_EXTRAS = [
   'create-session-source-url-guard.test.mjs',
   'kit-drift-check.mjs',
   'kit-drift-check.test.mjs',
+  /**
+   * The hold gate and its STATIC import closure (AFKF-18b, 2026-08-26).
+   *
+   * `ralph-chain.mjs`, `ralph-master-registry.mjs`, `mc-status.mjs`, `mc-opener.mjs` and
+   * `mc-ralph-health.mjs` are all kit-owned and all now import `./afkf-hold.mjs`. Without these,
+   * a repo seeded from the kit gets five scripts that throw on import — a break introduced by
+   * adding an import to a shipped file, which nothing in the drift check can see because those
+   * five are `seed` entries whose bytes are never compared.
+   *
+   * Only the STATIC closure is needed: `afkf-hold` reaches the divergence reader, the registry and
+   * the queue through dynamic `import()` inside functions, which fail at call time with a clear
+   * message rather than at load time with a broken script.
+   */
+  'afkf-hold.mjs',
+  // NOT `afkf-hold.test.mjs`: it asserts against this repo's own master doc, workflow and
+  // dashboard, and it imports the queue, which is repo data. The gate is universal; its
+  // regression tests are not.
+  'afkf-digest.mjs',
+  'afkf-ci-ceiling.mjs',
+  'afkf-retry.mjs',
 ];
 
 /**

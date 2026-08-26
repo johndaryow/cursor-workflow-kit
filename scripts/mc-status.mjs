@@ -109,12 +109,24 @@ console.log(`RECOMMENDED_SLICE: ${sliceForRename || 'none'}`);
  * Top-level await: this file is a linear .mjs script, and the alternative is threading a promise
  * through a hundred lines of console.log.
  */
-if (sliceForRename) {
+{
   try {
-    const { evaluateHold, evaluateKnownGates } = await import('./afkf-hold.mjs');
+    const { firstHeldOf, evaluateKnownGates } = await import('./afkf-hold.mjs');
     const { holdsFromLiveDocs } = await import('./afkf-chain-queue.mjs');
-    const held = evaluateHold(holdsFromLiveDocs()[sliceForRename] ?? null, (await evaluateKnownGates()).gates);
-    console.log(`HOLD: ${held.held ? `HELD — ${held.reason}` : 'none'}`);
+    /**
+     * EVERY slice this dashboard could hand a session, not just the one it renames the chat after.
+     * `ACTIVE_SLICE` names what RAN — here, a finished slice — while the queue head and
+     * `NEXT_PROMPT` name what a session would START. Checking only the first printed `HOLD: none`
+     * directly above a recommendation to begin held work.
+     */
+    const candidates = [
+      sliceForRename,
+      fields.recommendedSlice,
+      sliceIdFromDashboardValue(fields.afkQueue?.[0] ?? ''),
+      sliceIdFromDashboardValue(fields.nextPrompt ?? ''),
+    ];
+    const held = firstHeldOf(candidates, holdsFromLiveDocs(), (await evaluateKnownGates()).gates);
+    console.log(`HOLD: ${held ? `HELD ${held.slice} — ${held.reason}` : 'none'}`);
   } catch (err) {
     // Never take the status output down for this. An unreadable gate is reported, not swallowed:
     // "unknown" is the honest answer and it tells the reader to run the check themselves.

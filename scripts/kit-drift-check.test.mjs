@@ -23,20 +23,49 @@ assert.equal(newerSide(null, '2026-08-16T01:00:00Z'), 'unknown');
 assert.equal(newerSide('2026-08-16T01:00:00Z', null), 'unknown');
 
 // ------------------------------------------------------------- path mapping
-const entry = { kitPath: 'claude/rules/workflow-core.md', repoPath: '.claude/rules/workflow-core.md' };
+const entry = { kitPath: 'rules/merging.md', repoPath: 'docs/rules/merging.md' };
 const fakeKit = mkdtempSync(join(tmpdir(), 'kit-'));
-mkdirSync(join(fakeKit, 'claude', 'rules'), { recursive: true });
+mkdirSync(join(fakeKit, 'scripts'), { recursive: true });
 writeFileSync(join(fakeKit, 'install.sh'), '#!/usr/bin/env bash\n');
+writeFileSync(join(fakeKit, 'scripts', 'kit-manifest-build.mjs'), '// kit only\n');
 assert.equal(isKitRoot(fakeKit), true);
-assert.equal(localPathFor(entry, fakeKit), 'claude/rules/workflow-core.md');
+assert.equal(localPathFor(entry, fakeKit), 'rules/merging.md');
+
+// install.sh alone is not the kit — a repo could carry a stale copy of it.
+const halfKit = mkdtempSync(join(tmpdir(), 'half-'));
+writeFileSync(join(halfKit, 'install.sh'), '#!/usr/bin/env bash\n');
+assert.equal(isKitRoot(halfKit), false);
 
 const fakeRepo = mkdtempSync(join(tmpdir(), 'repo-'));
 assert.equal(isKitRoot(fakeRepo), false);
-assert.equal(localPathFor(entry, fakeRepo), '.claude/rules/workflow-core.md');
+assert.equal(localPathFor(entry, fakeRepo), 'docs/rules/merging.md');
+
+// ---------------------------------------------------- the real root resolves
+// The assertion the fixtures above could not make. isKitRoot decides which side of every
+// manifest entry to read; when it guesses wrong, nothing errors — the check simply looks in
+// a directory that does not exist and calls every file missing. That is exactly what happened
+// when the kit's rules tree was renamed and this heuristic still keyed off the old name.
+// Fixtures cannot catch it, because a fixture is built to match whatever the heuristic expects.
+// This reads the manifest this repo actually ships and asserts the paths it resolves are real.
+{
+  const manifestPath = join(ROOT, 'kit-manifest.json');
+  if (existsSync(manifestPath)) {
+    const live = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const missing = live.files
+      .map((f) => localPathFor(f, ROOT))
+      .filter((rel) => !existsSync(join(ROOT, rel)));
+    assert.deepEqual(
+      missing,
+      [],
+      `localPathFor resolved ${missing.length} of ${live.files.length} kit-owned paths to files that do not exist here. ` +
+        `isKitRoot(ROOT) said ${isKitRoot(ROOT)} — if that is wrong, every entry resolves to the wrong side.`,
+    );
+  }
+}
 
 // ------------------------------------------------------------ checkManifest
-mkdirSync(join(fakeRepo, '.claude', 'rules'), { recursive: true });
-writeFileSync(join(fakeRepo, '.claude', 'rules', 'workflow-core.md'), 'same bytes\n');
+mkdirSync(join(fakeRepo, 'docs', 'rules'), { recursive: true });
+writeFileSync(join(fakeRepo, 'docs', 'rules', 'merging.md'), 'same bytes\n');
 // sha256 of "same bytes\n"
 const sameSha = '9c2e42b3d0e3a9e0f8f0f7e2b3e0e5d5c7a1f1b1f4b6d6f5f7a4b7f0e3b2c1d0';
 

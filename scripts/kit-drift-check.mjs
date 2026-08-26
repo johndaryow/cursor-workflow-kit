@@ -23,9 +23,25 @@ export function sha256File(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
 
-/** The kit checks its own copies; a live repo checks the installed ones. */
+/**
+ * The kit checks its own copies; a live repo checks the installed ones.
+ *
+ * Identified by two files that exist ONLY in the kit, by design and by contract:
+ * `install.sh` (a repo is installed *into*, it does not carry the installer) and
+ * `scripts/kit-manifest-build.mjs` (install.sh explicitly refuses to copy it — building the
+ * manifest is the kit's job, checking against it is the repo's).
+ *
+ * This used to key off a `claude/rules/` directory. When the rules tree was renamed the kit
+ * stopped recognising itself, silently fell through to the repo paths, and reported every
+ * kit-owned file as "missing" — a check that fails loudly for the wrong reason is only one
+ * step better than one that passes for the wrong reason. Never key this off a path the kit's
+ * own layout is free to rename.
+ */
 export function isKitRoot(root) {
-  return existsSync(join(root, 'install.sh')) && existsSync(join(root, 'claude', 'rules'));
+  return (
+    existsSync(join(root, 'install.sh')) &&
+    existsSync(join(root, 'scripts', 'kit-manifest-build.mjs'))
+  );
 }
 
 export function localPathFor(entry, root) {

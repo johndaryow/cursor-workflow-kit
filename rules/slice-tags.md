@@ -11,6 +11,8 @@ MERGE_POLICY: auto_when_green | recommend_merge | do_not_merge
 EST_COST: <plain English> | CEO approval required
 ON_SUCCESS: <next STATUS slice id>
 ON_FAIL: stop — do not advance queue
+HOLD: <why this may not start yet>          # optional
+HOLD_UNTIL: <gate name>                     # required whenever HOLD is present
 ```
 
 | Tag | Meaning |
@@ -21,6 +23,32 @@ ON_FAIL: stop — do not advance queue
 | `CEO_GATE: merge_only` | Legacy. Use `MERGE_POLICY: auto_when_green` instead when AFK. |
 | `CEO_GATE: explicit_ok_in_chat` | The CEO must type approval before apply/deploy/DNS. |
 | `CEO_GATE: human_only` | The CEO must perform the action — credentials, DNS UI, vendor billing. |
+| `HOLD` | This slice may not start yet. Read by the chain, the queue and `afkf:hold-check` — **not** advice. |
+| `HOLD_UNTIL` | The named check that releases it. Without one the slice stays held for ever. |
+
+## HOLD — a wait a machine enforces
+
+A `HOLD` used to be a sentence in the document and nothing else. On 2026-08-21 the chain claimed
+and launched AFKF-18 six days before its own block said it could start, because prose is not a
+gate. It is one now.
+
+```bash
+npm run afkf:hold-check              # everything currently held, and why
+npm run afkf:hold-check -- AFKF-18   # one slice. Exits 1 when held
+```
+
+**Name a check, never a date.** The stopgap for AFKF-18 was a hand-typed `held until 2026-08-27`,
+and that date was wrong — the window's first day was never recorded, so it could not close before
+the 28th. A wrong date fails **open**: the day arrives and the gate lets the slice through. A named
+check is re-evaluated every time anything asks, so it cannot go stale.
+
+Gates today: `chain-divergence-window`.
+
+**Everything unknown is held.** No `HOLD_UNTIL`, a gate name with a typo, a database that could not
+be reached — all four resolve to held, and the reason says which. The way to start a held slice is
+to make its evidence exist, never to make the check quieter.
+
+A held slice is not a blocked chain: the queue skips it and runs the next ready slice.
 
 ## Defaults
 

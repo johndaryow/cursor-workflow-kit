@@ -10,7 +10,7 @@
  * no rules or skills to load. Nothing errors. The session looks alive and has nothing to
  * work on. That is what happened to LNP-1.
  *
- * WORKFLOW-P25 documented `source_url` in `.claude/rules/planning-chain-handoff.md`. Docs are
+ * WORKFLOW-P25 documented `source_url` in `docs/rules/planning-chain.md`. Docs are
  * not a guarantee: the next agent to tidy that snippet, or to write a new one in a different
  * skill, restores the failure and nothing notices. This guard is what notices.
  *

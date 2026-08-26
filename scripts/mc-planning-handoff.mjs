@@ -207,7 +207,7 @@ if (!isDirectRun) {
     '',
     `Master doc: ${masterRel}`,
     '',
-    'Honour the always-on rules: .claude/rules/workflow-core.md, ceo-communication.md,',
+    'Honour the always-on rules: AGENTS.md, ceo-communication.md,',
     'auto-merge-policy.md, planning-chain-handoff.md.',
     '',
     'End of session: update the STATUS DASHBOARD in the same PR, put the SESSION REPORT in the',

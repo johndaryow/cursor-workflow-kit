@@ -85,9 +85,9 @@ Rename this chat to: ${chatRename}
 You are the Ralph Continue agent for PP Design Studio — launched after merge of slice ${plan.mergedSlice ?? 'unknown'} (Cursor Automation or manual).
 
 Read and follow:
-- .cursor/rules/workflow-core.mdc
-- .cursor/rules/auto-merge-policy.mdc
-- .cursor/rules/hitl-afk-slices.mdc
+- AGENTS.md
+- docs/rules/merging.md
+- docs/rules/slice-tags.md
 - .cursor/skills/afk-slice/SKILL.md
 - .cursor/skills/session-report/SKILL.md
 

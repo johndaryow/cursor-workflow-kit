@@ -38,31 +38,45 @@ describe('detectAgent', () => {
   });
 });
 
-describe('rule paths follow the agent asking', () => {
-  it('gives a Claude Code session .claude paths and never .cursor ones', () => {
-    const block = rulesBlock('claude');
-    assert.match(block, /\.claude\/rules\/workflow-core\.md/);
-    assert.match(block, /\.claude\/rules\/agent-chat-session\.md/);
-    assert.ok(!block.includes('.cursor/'), 'a Claude Code prompt must not cite Cursor rule paths');
-    assert.ok(!sessionLine('claude').includes('Composer'), 'Composer is Cursor-only');
-    assert.equal(autoMergePolicyPath('claude'), '.claude/rules/auto-merge-policy.md');
+describe('one rulebook, every agent', () => {
+  // Was: "rule paths follow the agent asking" — the repo shipped the same rules in two dialects
+  // (.claude/rules/*.md and .cursor/rules/*.mdc), so an agent handed the other one's paths read a
+  // file it does not load. There is now one AGENTS.md read by all three tools, and these tests
+  // exist to stop the dialects coming back.
+
+  it('points every agent at the same rulebook', () => {
+    for (const agent of ['claude', 'cursor', 'codex', 'unknown']) {
+      const block = rulesBlock(agent);
+      assert.match(block, /AGENTS\.md/, `${agent} must be pointed at AGENTS.md`);
+    }
   });
 
-  it('gives a Cursor session .cursor paths', () => {
-    const block = rulesBlock('cursor');
-    assert.match(block, /\.cursor\/rules\/workflow-core\.mdc/);
-    assert.ok(!block.includes('.claude/'), 'a Cursor prompt must not cite Claude Code rule paths');
+  it('never cites a tool-specific rule directory', () => {
+    for (const agent of ['claude', 'cursor', 'codex', 'unknown']) {
+      const block = rulesBlock(agent);
+      assert.ok(!block.includes('.claude/rules'), `${agent}: .claude/rules is gone`);
+      assert.ok(!block.includes('.cursor/rules'), `${agent}: .cursor/rules is gone`);
+    }
+  });
+
+  it('still keeps the session advice tool-specific', () => {
+    assert.ok(!sessionLine('claude').includes('Composer'), 'Composer is Cursor-only');
     assert.match(sessionLine('cursor'), /Composer/);
   });
 
-  it('labels both when it cannot tell', () => {
-    const block = rulesBlock('unknown');
-    assert.match(block, /Claude Code: \.claude\/rules/);
-    assert.match(block, /Cursor: \.cursor\/rules/);
+  it('names one auto-merge rule, whoever asks', () => {
+    assert.equal(autoMergePolicyPath(), 'docs/rules/merging.md');
   });
 
-  it('ships exactly the two agents the repo has rules for', () => {
-    assert.deepEqual(Object.keys(AGENT_PROFILES).sort(), ['claude', 'cursor']);
+  it('ships the three agents the repo is driven from', () => {
+    assert.deepEqual(Object.keys(AGENT_PROFILES).sort(), ['claude', 'codex', 'cursor']);
+  });
+
+  it('gives every agent its own branch prefix', () => {
+    assert.deepEqual(
+      Object.values(AGENT_PROFILES).map((p) => p.branchPrefix).sort(),
+      ['claude', 'codex', 'cursor'],
+    );
   });
 });
 

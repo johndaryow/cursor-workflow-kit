@@ -11,9 +11,9 @@
  *
  * Two things it used to get wrong, both fixed here:
  *
- *   1. It printed Cursor's rule paths (`.cursor/rules/*.mdc`) and "Composer 2.5" at every
- *      caller, including Claude Code sessions — which then read rules that are not the ones
- *      they load. The agent asking is now detected, and each gets its own paths.
+ *   1. It printed one tool's rule paths at every caller, so the other tool read files it does not
+ *      load. Since the rulebook collapsed to a single AGENTS.md this cannot happen: every tool is
+ *      pointed at the same file.
  *   2. It printed `EXIT PLAN (Lane B): docs/projects/workers-exit-plan.md` for every program,
  *      including the ~40 that have nothing to do with the workers migration. A line that is
  *      wrong for most callers teaches the reader to skim the block. Exit plans are now
@@ -37,22 +37,28 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
 
 /**
- * One entry per agent we ship rules for. `.claude/` and `.cursor/` hold the same content in two
- * dialects; an agent handed the other one's paths reads a file it does not load.
+ * One entry per agent. There is now **one** rulebook — `AGENTS.md` at the repo root — read by all
+ * three, so nothing about rules differs per tool any more. What still differs is the session advice
+ * and the branch prefix.
  */
+export const RULEBOOK = 'AGENTS.md';
+
 export const AGENT_PROFILES = {
   claude: {
     label: 'Claude Code',
+    branchPrefix: 'claude',
     sessionLine:
       'Recommended: fresh Claude Code session · Opus for planning, Sonnet for AFK execution (agent-discipline skill)',
-    rules: ['.claude/rules/workflow-core.md', '.claude/rules/agent-chat-session.md'],
-    autoMergePolicy: '.claude/rules/auto-merge-policy.md',
   },
   cursor: {
     label: 'Cursor',
+    branchPrefix: 'cursor',
     sessionLine: 'Recommended: Composer 2.5 · Agent · new chat',
-    rules: ['.cursor/rules/workflow-core.mdc', '.cursor/rules/agent-chat-session.mdc'],
-    autoMergePolicy: '.cursor/rules/auto-merge-policy.mdc',
+  },
+  codex: {
+    label: 'Codex',
+    branchPrefix: 'codex',
+    sessionLine: 'Recommended: a fresh Codex session',
   },
 };
 
@@ -78,21 +84,17 @@ export function detectAgent(env = process.env, argv = []) {
   const aiAgent = String(env.AI_AGENT ?? '');
   if (env.CLAUDECODE || env.CLAUDE_CODE_SESSION_ID || /claude/i.test(aiAgent)) return 'claude';
   if (env.CURSOR_AGENT || env.CURSOR_TRACE_ID || /cursor/i.test(aiAgent)) return 'cursor';
+  if (env.CODEX_SANDBOX || env.CODEX_HOME || /codex/i.test(aiAgent)) return 'codex';
   return 'unknown';
 }
 
-/** The "Read and follow" block for the detected agent. Unknown prints both, labelled. */
-export function rulesBlock(agent) {
-  if (agent === 'unknown') {
-    const claude = AGENT_PROFILES.claude.rules.join(' · ');
-    const cursor = AGENT_PROFILES.cursor.rules.join(' · ');
-    return [
-      'Read and follow your own tool\'s copy (same content, two dialects):',
-      `- Claude Code: ${claude}`,
-      `- Cursor: ${cursor}`,
-    ].join('\n');
-  }
-  return ['Read and follow:', ...AGENT_PROFILES[agent].rules.map((r) => `- ${r}`)].join('\n');
+/** The "Read and follow" block. One rulebook, so the answer no longer depends on the tool. */
+export function rulesBlock() {
+  return [
+    'Read and follow:',
+    `- ${RULEBOOK} — the always-on rulebook (Claude Code, Cursor and Codex alike)`,
+    '- docs/rules/<topic>.md — on demand, via the index in §7 of that file',
+  ].join('\n');
 }
 
 export function sessionLine(agent) {
@@ -102,9 +104,8 @@ export function sessionLine(agent) {
   return AGENT_PROFILES[agent].sessionLine;
 }
 
-export function autoMergePolicyPath(agent) {
-  if (agent === 'unknown') return 'the auto-merge-policy rule';
-  return AGENT_PROFILES[agent].autoMergePolicy;
+export function autoMergePolicyPath() {
+  return 'docs/rules/merging.md';
 }
 
 /**
@@ -152,7 +153,7 @@ export function buildOpener({
     '',
     sessionLine(agent),
     '',
-    rulesBlock(agent),
+    rulesBlock(),
     '',
     `MASTER DOC: ${masterRel}`,
     ...(exitPlan ? [exitPlan] : []),
@@ -163,9 +164,7 @@ export function buildOpener({
     '',
     'First reply MUST print the Chat name line, then start preflight.',
     '',
-    `End: update STATUS DASHBOARD in same PR, SESSION REPORT in PR body, auto-merge per ${autoMergePolicyPath(
-      agent,
-    )} when green.`,
+    `End: update STATUS DASHBOARD in same PR, SESSION REPORT in PR body, auto-merge per ${autoMergePolicyPath()} when green.`,
     '',
     `Then hand off: run \`npm run mc:opener -- ${program}\` and put the prompt it prints in the`,
     'SESSION REPORT, so the next session starts from an exact prompt. Never end by telling the',

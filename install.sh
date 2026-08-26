@@ -14,32 +14,42 @@ fi
 
 echo "Installing workflow kit into: $ROOT"
 
-# Skills (Cursor)
-mkdir -p "$ROOT/.cursor/skills"
-rsync -a --delete "$KIT/cursor/skills/" "$ROOT/.cursor/skills/"
-
-# Rules (Cursor)
-mkdir -p "$ROOT/.cursor/rules"
-for f in "$KIT/cursor/rules/"*.mdc; do
-  cp "$f" "$ROOT/.cursor/rules/"
-done
-
-# Skills (Claude Code) — same Agent Skills format as Cursor, own folder for native discovery
+# Skills — ONE tree. `.cursor/skills` and `.agents/skills` are symlinks to it, so Cursor and the
+# `.agents` discovery path read the same files. Nothing is copied twice and nothing drifts.
 mkdir -p "$ROOT/.claude/skills"
-rsync -a --delete "$KIT/claude/skills/" "$ROOT/.claude/skills/"
+rsync -a --delete "$KIT/skills/" "$ROOT/.claude/skills/"
 
-# Rules (Claude Code) — plain markdown, imported from CLAUDE.md instead of Cursor's alwaysApply
-mkdir -p "$ROOT/.claude/rules"
-for f in "$KIT/claude/rules/"*.md; do
-  cp "$f" "$ROOT/.claude/rules/"
+# Rules — ONE tree, tool-neutral, read on demand from the index in AGENTS.md §7.
+mkdir -p "$ROOT/docs/rules"
+for f in "$KIT/rules/"*.md; do
+  base="$(basename "$f")"
+  if [[ -f "$ROOT/docs/rules/$base" ]]; then
+    cp "$f" "$ROOT/docs/rules/$base"
+  else
+    cp "$f" "$ROOT/docs/rules/"
+    echo "Created docs/rules/$base"
+  fi
 done
+
+# AGENTS.md — THE rulebook, read by Claude Code, Cursor and Codex. Never overwrite a real one:
+# section 6 is repo-specific and the repo owns it.
+if [[ ! -f "$ROOT/AGENTS.md" ]]; then
+  cp "$KIT/templates/AGENTS.md" "$ROOT/AGENTS.md"
+  echo "Created $ROOT/AGENTS.md — fill in section 6"
+else
+  echo "Skip AGENTS.md (already exists) — compare against templates/AGENTS.md by hand"
+fi
+
+# Cursor reads AGENTS.md natively; this is the belt-and-braces pointer.
+mkdir -p "$ROOT/.cursor/rules"
+cp "$KIT/templates/cursor/000-agents.mdc" "$ROOT/.cursor/rules/000-agents.mdc"
 
 # CLAUDE.md — only create if the repo doesn't already have one; never overwrite
 if [[ ! -f "$ROOT/CLAUDE.md" ]]; then
-  cp "$KIT/claude/CLAUDE.md" "$ROOT/CLAUDE.md"
+  cp "$KIT/templates/CLAUDE.md" "$ROOT/CLAUDE.md"
   echo "Created $ROOT/CLAUDE.md"
 else
-  echo "Skip CLAUDE.md (already exists) — merge docs/projects/CLAUDE-workflow-snippet.md into it by hand"
+  echo "Skip CLAUDE.md (already exists) — it only needs to contain @AGENTS.md plus your Claude-only notes"
 fi
 
 # Scripts
@@ -83,21 +93,21 @@ for f in "$KIT/templates/"*.md; do
   fi
 done
 
-# Mirror skills for Cursor discovery
+# Point Cursor and .agents at the one skills tree (symlinks, not copies)
 if [[ -f "$ROOT/package.json" ]] && grep -q '"sync:agent-skills"' "$ROOT/package.json" 2>/dev/null; then
   (cd "$ROOT" && npm run sync:agent-skills)
 elif command -v node >/dev/null 2>&1; then
   node "$ROOT/scripts/sync-agent-skills.mjs"
 else
-  echo "WARN: run 'npm run sync:agent-skills' after adding package.json scripts"
+  echo "WARN: run 'npm run sync:agent-skills' to create the .cursor/skills and .agents/skills symlinks"
 fi
 
 echo ""
 echo "Done. Next steps:"
 echo "  1. Merge templates/package-scripts.json into package.json (includes kit:drift)"
 echo "  2. Cursor: paste User Rule from docs/projects/workflow-user-rules-canonical.md"
-echo "  3. Claude Code: CLAUDE.md was created fresh, or merge docs/projects/CLAUDE-workflow-snippet.md if you already had one"
+echo "  3. Fill in section 6 of AGENTS.md — the repo-specific facts"
 echo "  4. Rename docs/projects/my-program-master.md → your-program-master.md"
 echo "  5. Trim scripts/ralph-chain-config.mjs for your slice ids"
 echo "  6. Run 'npm run kit:drift' — it must print OK before you start work"
-echo "  7. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on Cloud VM) — Claude Code chaining is manual by default, see claude/skills/ralph-loop/SKILL.md"
+echo "  7. GitHub secrets: CURSOR_API_KEY (+ GITHUB_TOKEN on a cloud VM) — see skills/ralph-loop/SKILL.md"

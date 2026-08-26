@@ -145,7 +145,40 @@ export function buildOpener({
   masterRel,
   nextPrompt,
   exitPlan,
+  hold = null,
 }) {
+  /**
+   * AFKF-18b, ROUND TWO — THE COLD START IS THE ROUTE THE CEO ACTUALLY NAMED.
+   *
+   * The first version of the hold gate covered every AUTOMATED launcher: the chain, the queue, the
+   * planning chain. It did not cover this one, and this one is the prompt a HUMAN pastes to start a
+   * session — the literal "a session reading prose" the CEO asked to stop relying on. `mc:opener`
+   * printed `Execute slice **AFKF-18**` with the hold nowhere in sight, and `.github/workflows/
+   * mc-ralph.yml` runs it too.
+   *
+   * A held slice does not get an opener. It gets a refusal that names the slice, the reason, and
+   * the command that answers "when?", because the next thing the reader needs is the next ready
+   * slice, not an explanation of why this one is stuck.
+   */
+  if (hold?.held) {
+    const heldSlice = hold.slice ?? recommendedSlice;
+    return [
+      `**Chat name:** ${chatRename}`,
+      '',
+      `**${heldSlice} is HELD — do not start it.**`,
+      '',
+      hold.reason,
+      '',
+      `MASTER DOC: ${masterRel}`,
+      '',
+      'A held slice is not a blocked chain. Take the next ready slice instead:',
+      '  npm run afkf:chain-queue',
+      '',
+      'When can it start? The check answers, not a date in a document:',
+      `  npm run afkf:hold-check -- ${heldSlice}`,
+    ].join('\n');
+  }
+
   return [
     `**Chat name:** ${chatRename}`,
     '',
@@ -176,7 +209,7 @@ export function buildOpener({
 
 const isDirectRun = Boolean(process.argv[1]) && process.argv[1].endsWith('mc-opener.mjs');
 
-if (isDirectRun) {
+async function runOpener() {
   const argv = process.argv.slice(2);
   const program = argv.find((a) => !a.startsWith('-')) ?? 'platform';
   const wantsJson = argv.includes('--json');
@@ -211,6 +244,44 @@ if (isDirectRun) {
   const fields = parseDashboardFields(dashboard);
   const nextPrompt = fields.nextPrompt || '§12';
 
+  /**
+   * AFKF-18b — the verdict comes from `mc-status`, which this already spawned, rather than from a
+   * second evaluation here.
+   *
+   * The first version re-derived it from `recommendedSlice` alone, and that is the field that was
+   * wrong: `ACTIVE_SLICE` names a finished slice while the queue head is the held one. Two readers
+   * of the same question is how they came to disagree, so there is one — `mc-status` checks every
+   * slice its dashboard could hand over, prints the verdict, and this obeys the line.
+   */
+  const holdLine = statusOut.match(/^HOLD:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  const heldMatch = holdLine && /^HELD\s+(\S+)\s+—\s+([\s\S]+)$/.exec(holdLine);
+
+  /**
+   * ONLY THE LITERAL WORD `none` MEANS NOT HELD. Everything else is held.
+   *
+   * The first version of this parse accepted a well-formed `HELD …` and treated EVERY other shape
+   * as clear — including `mc-status`'s own `HOLD: unknown — could not evaluate (…)`, which is what
+   * it prints when the gate could not be read at all. So the one case the whole design promises
+   * resolves to HELD resolved to "start the slice", and a kit-seeded repo hits it by default.
+   *
+   * That was a REGRESSION introduced by moving the verdict from an evaluation to a parsed line:
+   * `evaluateKnownGates` swallows its own errors into an absent gate and `evaluateHold` reads
+   * absent as held, so the version this replaced was fail-closed for free. Reading a line instead
+   * of computing one is only safe if the reader defaults the way the computation would.
+   */
+  const hold = heldMatch
+    ? { held: true, slice: heldMatch[1], reason: heldMatch[2] }
+    : holdLine === 'none'
+      ? { held: false, slice: null, reason: '' }
+      : {
+          held: true,
+          slice: null,
+          reason:
+            holdLine === null
+              ? 'mc:status printed no HOLD line — the gate could not be read, and unread is not clear'
+              : `mc:status could not evaluate the hold: ${holdLine}`,
+        };
+
   const opener = buildOpener({
     agent,
     program,
@@ -220,12 +291,25 @@ if (isDirectRun) {
     masterRel,
     nextPrompt,
     exitPlan: exitPlanLine(program, (rel) => existsSync(resolve(root, rel))),
+    hold,
   });
 
   if (wantsJson) {
     console.log(
       JSON.stringify(
-        { program, agent, slice: recommendedSlice, autonomy, chatRename, masterDoc: masterRel, prompt: opener },
+        {
+          program,
+          agent,
+          slice: recommendedSlice,
+          autonomy,
+          chatRename,
+          masterDoc: masterRel,
+          // AFKF-18b — the machine-readable half. `mc-ralph.yml` and `create_session` read this
+          // JSON; a caller that only looks at `slice` must still be able to see the refusal.
+          held: Boolean(hold?.held),
+          holdReason: hold?.held ? hold.reason : null,
+          prompt: opener,
+        },
         null,
         2,
       ),
@@ -233,4 +317,11 @@ if (isDirectRun) {
   } else {
     console.log(opener);
   }
+}
+
+if (isDirectRun) {
+  runOpener().catch((err) => {
+    console.error(String(err?.message ?? err));
+    process.exit(1);
+  });
 }

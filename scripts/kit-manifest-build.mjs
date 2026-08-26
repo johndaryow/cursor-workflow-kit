@@ -53,6 +53,38 @@ export const UNIVERSAL_SCRIPT_EXTRAS = [
   'create-session-source-url-guard.test.mjs',
   'kit-drift-check.mjs',
   'kit-drift-check.test.mjs',
+  /**
+   * The hold gate and its STATIC import closure (AFKF-18b, 2026-08-26).
+   *
+   * `ralph-chain.mjs`, `ralph-master-registry.mjs`, `mc-status.mjs`, `mc-opener.mjs` and
+   * `mc-ralph-health.mjs` are all kit-owned and all now import `./afkf-hold.mjs`. Without these,
+   * a repo seeded from the kit gets five scripts that throw on import — a break introduced by
+   * adding an import to a shipped file, which nothing in the drift check can see because those
+   * five are `seed` entries whose bytes are never compared.
+   *
+   * Only the STATIC closure is needed: `afkf-hold` reaches the divergence reader, the registry and
+   * the queue through dynamic `import()` inside functions, which fail at call time with a clear
+   * message rather than at load time with a broken script.
+   */
+  'afkf-hold.mjs',
+  /**
+   * The DYNAMIC imports too, round four. Only the static closure shipped, and `mc-status.mjs`
+   * reaches `afkf-chain-queue.mjs` through `await import()` — which failed in a kit-seeded repo,
+   * printed `HOLD: unknown`, and `mc-opener` read anything that was not a well-formed HELD line as
+   * clear. The gate's default state in a fresh repo was OFF. `mc-opener` fails closed on that now,
+   * but a gate that cannot evaluate is a gate nobody trusts, so the modules ship.
+   */
+  'afkf-chain-queue.mjs',
+  'afkf-chat.mjs',
+  'afkf-chain-divergence.mjs',
+  'afkf-chain-state.mjs',
+  'afkf-chain-import.mjs',
+  // NOT `afkf-hold.test.mjs`: it asserts against this repo's own master doc, workflow and
+  // dashboard, and it imports the queue, which is repo data. The gate is universal; its
+  // regression tests are not.
+  'afkf-digest.mjs',
+  'afkf-ci-ceiling.mjs',
+  'afkf-retry.mjs',
 ];
 
 /**

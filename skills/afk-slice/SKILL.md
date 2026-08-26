@@ -10,6 +10,10 @@ description: Executes one AFK slice from master doc STATUS and NEXT_PROMPT — v
 0. `npm run cloud:env-check` — stop and report if FAIL (AFK must not run deploy without credentials). If this repo's version re-auths `gh` with a PAT for the Cursor Cloud path, Claude Code sessions with GitHub MCP tools available can usually skip that step — MCP handles PR create directly.
 1. `npm run gcp:auth` when deploy/spot-check needed
 2. `npm run mc:status` — confirm `AUTONOMY: AFK`, `BLOCKED_BY: none`, read `CHAT_RENAME:`
+2b. `npm run afkf:hold-check -- <slice>` — a slice can carry a `HOLD` that `BLOCKED_BY` does not
+   repeat. **Held → stop**, say the date it can start, and take the next ready slice instead. The
+   chain refuses a held slice too; this is so you find out in the first minute rather than after
+   the work ([`slice-tags.md`](../../../docs/rules/slice-tags.md))
 3. **First reply line:** `**Chat name:** <CHAT_RENAME>` (see [`agent-chat-session.md`](../../../docs/rules/planning-chain.md))
 4. Read NEXT_PROMPT / `RECOMMENDED_SLICE` only + linked files in prompt
 

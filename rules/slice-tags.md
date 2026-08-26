@@ -48,7 +48,15 @@ Gates today: `chain-divergence-window`.
 be reached — all four resolve to held, and the reason says which. The way to start a held slice is
 to make its evidence exist, never to make the check quieter.
 
-A held slice is not a blocked chain: the queue skips it and runs the next ready slice.
+**Where a held slice stops the lane, and where it does not.** `npm run afkf:chain-queue` skips it and
+offers the next ready slice from another programme. The on-merge chain does not: a held slice at the
+front of its own programme stops that programme's lane until the hold releases. That is the intended
+trade — the alternative is starting work out of order — but say so rather than implying the chain
+routes around it.
+
+**A `HOLD` with no `HOLD_UNTIL` is held for ever, by design and with no escape but an edit.** Use it
+only when the release condition is a human judgement that nothing records. AFKF-22 is the live
+example. If a check could record it, write the check.
 
 ## Defaults
 

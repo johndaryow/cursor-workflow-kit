@@ -145,7 +145,39 @@ export function buildOpener({
   masterRel,
   nextPrompt,
   exitPlan,
+  hold = null,
 }) {
+  /**
+   * AFKF-18b, ROUND TWO — THE COLD START IS THE ROUTE THE CEO ACTUALLY NAMED.
+   *
+   * The first version of the hold gate covered every AUTOMATED launcher: the chain, the queue, the
+   * planning chain. It did not cover this one, and this one is the prompt a HUMAN pastes to start a
+   * session — the literal "a session reading prose" the CEO asked to stop relying on. `mc:opener`
+   * printed `Execute slice **AFKF-18**` with the hold nowhere in sight, and `.github/workflows/
+   * mc-ralph.yml` runs it too.
+   *
+   * A held slice does not get an opener. It gets a refusal that names the slice, the reason, and
+   * the command that answers "when?", because the next thing the reader needs is the next ready
+   * slice, not an explanation of why this one is stuck.
+   */
+  if (hold?.held) {
+    return [
+      `**Chat name:** ${chatRename}`,
+      '',
+      `**${recommendedSlice} is HELD — do not start it.**`,
+      '',
+      hold.reason,
+      '',
+      `MASTER DOC: ${masterRel}`,
+      '',
+      'A held slice is not a blocked chain. Take the next ready slice instead:',
+      '  npm run afkf:chain-queue',
+      '',
+      'When can it start? The check answers, not a date in a document:',
+      `  npm run afkf:hold-check -- ${recommendedSlice}`,
+    ].join('\n');
+  }
+
   return [
     `**Chat name:** ${chatRename}`,
     '',
@@ -176,7 +208,7 @@ export function buildOpener({
 
 const isDirectRun = Boolean(process.argv[1]) && process.argv[1].endsWith('mc-opener.mjs');
 
-if (isDirectRun) {
+async function runOpener() {
   const argv = process.argv.slice(2);
   const program = argv.find((a) => !a.startsWith('-')) ?? 'platform';
   const wantsJson = argv.includes('--json');
@@ -211,6 +243,11 @@ if (isDirectRun) {
   const fields = parseDashboardFields(dashboard);
   const nextPrompt = fields.nextPrompt || '§12';
 
+  // AFKF-18b — one read, and a slice this refuses is a slice no session is handed.
+  const { evaluateHold, evaluateKnownGates } = await import('./afkf-hold.mjs');
+  const { holdsFromLiveDocs } = await import('./afkf-chain-queue.mjs');
+  const hold = evaluateHold(holdsFromLiveDocs()[recommendedSlice] ?? null, (await evaluateKnownGates()).gates);
+
   const opener = buildOpener({
     agent,
     program,
@@ -220,12 +257,25 @@ if (isDirectRun) {
     masterRel,
     nextPrompt,
     exitPlan: exitPlanLine(program, (rel) => existsSync(resolve(root, rel))),
+    hold,
   });
 
   if (wantsJson) {
     console.log(
       JSON.stringify(
-        { program, agent, slice: recommendedSlice, autonomy, chatRename, masterDoc: masterRel, prompt: opener },
+        {
+          program,
+          agent,
+          slice: recommendedSlice,
+          autonomy,
+          chatRename,
+          masterDoc: masterRel,
+          // AFKF-18b — the machine-readable half. `mc-ralph.yml` and `create_session` read this
+          // JSON; a caller that only looks at `slice` must still be able to see the refusal.
+          held: Boolean(hold?.held),
+          holdReason: hold?.held ? hold.reason : null,
+          prompt: opener,
+        },
         null,
         2,
       ),
@@ -233,4 +283,11 @@ if (isDirectRun) {
   } else {
     console.log(opener);
   }
+}
+
+if (isDirectRun) {
+  runOpener().catch((err) => {
+    console.error(String(err?.message ?? err));
+    process.exit(1);
+  });
 }

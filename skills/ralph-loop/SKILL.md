@@ -35,6 +35,12 @@ Verify the wiring without spending a session:
 npm run mc:ralph-fire-claude -- --merged-slice W17 --dry-run
 ```
 
+> **A held slice never cold-starts.** All three routes below refuse one: the scheduled routine runs
+> through the chain planner, `mc:opener` prints a refusal instead of a prompt, and `mc:status` prints
+> a `HOLD:` line under the slice it recommends. Take the next ready slice
+> (`npm run afkf:chain-queue`); `npm run afkf:hold-check -- <slice>` says when the held one can
+> start. See [`slice-tags.md`](../../../docs/rules/slice-tags.md).
+
 ### 2. Scheduled cold-start (no GitHub secret needed)
 
 A routine with a **schedule trigger** (hourly or slower) that wakes, reads STATUS, and runs the next queued slice — or stops when the queue is empty. Coarser than merge-triggered and it burns a session per firing even when idle, but it needs no repo secret. Create it at [claude.ai/code/routines](https://claude.ai/code/routines) or with `/schedule` in the CLI.

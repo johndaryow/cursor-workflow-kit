@@ -97,6 +97,30 @@ console.log('# AGENT META (chat naming + continue)');
 console.log('');
 console.log(`CHAT_RENAME: ${chatRename || 'unknown — update §12 or workers-exit-plan.md'}`);
 console.log(`RECOMMENDED_SLICE: ${sliceForRename || 'none'}`);
+
+/**
+ * AFKF-18b, ROUND TWO — step 1 of the first sixty seconds must say when the slice is held.
+ *
+ * `AGENTS.md` §4 sends every execution session here first, and this line is what it acts on. It
+ * recommended a held slice with the hold nowhere in the output — the prose lived in §12, which the
+ * same rule tells the session NOT to read. Printed immediately under the recommendation, because a
+ * refusal three screens later is a refusal nobody sees.
+ *
+ * Top-level await: this file is a linear .mjs script, and the alternative is threading a promise
+ * through a hundred lines of console.log.
+ */
+if (sliceForRename) {
+  try {
+    const { evaluateHold, evaluateKnownGates } = await import('./afkf-hold.mjs');
+    const { holdsFromLiveDocs } = await import('./afkf-chain-queue.mjs');
+    const held = evaluateHold(holdsFromLiveDocs()[sliceForRename] ?? null, (await evaluateKnownGates()).gates);
+    console.log(`HOLD: ${held.held ? `HELD — ${held.reason}` : 'none'}`);
+  } catch (err) {
+    // Never take the status output down for this. An unreadable gate is reported, not swallowed:
+    // "unknown" is the honest answer and it tells the reader to run the check themselves.
+    console.log(`HOLD: unknown — could not evaluate (${String(err?.message ?? err)}); run npm run afkf:hold-check`);
+  }
+}
 console.log(`AUTONOMY: ${dashboard.match(/^AUTONOMY:\s*(.+)$/m)?.[1]?.trim() ?? 'unknown'}`);
 
 if (arg === 'platform' || rel.includes('platform-migration-master')) {

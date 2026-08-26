@@ -25,7 +25,10 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -572,13 +575,37 @@ test('an accepted finding is reported but does not fail', () => {
   assert.deepEqual(after.unusedAcceptances, []);
 });
 
+/**
+ * The reason field is enforced, not merely documented.
+ *
+ * A critic ran `partition(docs, [{doc, klass, key}])` with no reason and watched an open-programme
+ * failure go green while the report printed `why not fixed: undefined`. Every other suppression in
+ * this file already refuses a reference-free form; this one only said so in a comment.
+ */
+test('an acceptance entry with no reason accepts nothing', () => {
+  const docs = [checkDoc({ name: 'afkf-master.md', text: heldDoc, knownScripts: KNOWN, tokens: TOKENS })];
+  for (const bad of [{}, { reason: '' }, { reason: '   ' }]) {
+    const { open, accepted } = partition(docs, [{ doc: 'afkf-master.md', klass: 'C', key: 'AFKF-22', ...bad }]);
+    assert.equal(open.length, 1, `a reasonless entry must not suppress: ${JSON.stringify(bad)}`);
+    assert.equal(accepted.length, 0);
+  }
+  assert.equal(partition(docs, [ENTRY]).open.length, 0, 'the same entry WITH a reason does accept');
+});
+
 test('an acceptance is matched on doc+class+key, never on a line number', () => {
   const f = { doc: 'afkf-master.md', klass: 'C', slice: 'AFKF-22', line: 1331 };
   assert.equal(acceptanceMatches(ENTRY, f), true);
   assert.equal(acceptanceMatches(ENTRY, { ...f, line: 9999 }), true, 'line numbers move; the entry must not care');
   assert.equal(acceptanceMatches(ENTRY, { ...f, slice: 'AFKF-21' }), false);
   assert.equal(acceptanceMatches(ENTRY, { ...f, doc: 'other-master.md' }), false);
-  assert.equal(acceptanceMatches(ENTRY, { ...f, klass: 'A' }), false);
+  // The class guard has to be load-bearing on its own: same doc, same key string, different class.
+  // Without an A-shaped finding whose `command` equals the C entry's key, dropping the `klass`
+  // comparison changes nothing and the guard is untested.
+  assert.equal(
+    acceptanceMatches(ENTRY, { doc: 'afkf-master.md', klass: 'A', command: 'AFKF-22' }),
+    false,
+    'a class-C acceptance must never cover a class-A finding that happens to share the key',
+  );
 });
 
 test('an acceptance that accepts a DIFFERENT finding in the same doc does not cover this one', () => {
@@ -603,6 +630,111 @@ test('an acceptance covers only its own class-A command', () => {
   assert.equal(accepted.length, 1);
   assert.equal(open.length, 1);
   assert.equal(open[0].command, 'gone:two');
+});
+
+/* ────────────────────────────────────────────── the STATUS DASHBOARD is a live region (critic find) */
+
+test('class B: a false PR claim in the STATUS DASHBOARD is caught', () => {
+  const text = [
+    'ACTIVE_SLICE: PROOF-6',
+    '',
+    '## STATUS DASHBOARD',
+    '',
+    '```text',
+    'LIVE_VENUE: ✅ `proof-baseline.yml` on every PR.',
+    '```',
+  ].join('\n');
+  const found = findDemotedChecks(text, TOKENS);
+  assert.equal(found.length, 1, 'AGENTS.md sends every session to this block and only this block');
+  assert.equal(found[0].region, 'dashboard STATUS DASHBOARD');
+});
+
+test('class B: the dashboard fields that carry history are exempt', () => {
+  // KNOWN_TRAP_30 is the write-up OF the demotion this class exists to catch. Flagging it would
+  // report the repository's own accurate history as rot.
+  for (const field of ['KNOWN_TRAP_30', 'BLOCKED_BY_NOTE', 'LAST_SOAK', 'LAST_MERGED_PR']) {
+    const text = [
+      'ACTIVE_SLICE: X-1',
+      '',
+      '## STATUS DASHBOARD',
+      '',
+      '```text',
+      `${field}: \`proof-baseline.yml\` used to run on every PR as a required check.`,
+      '```',
+    ].join('\n');
+    assert.deepEqual(findDemotedChecks(text, TOKENS), [], `${field} is a record, not an instruction`);
+  }
+});
+
+test('class B: an ordinary dashboard field naming a live check is left alone', () => {
+  const text = [
+    'ACTIVE_SLICE: X-1',
+    '',
+    '## STATUS DASHBOARD',
+    '',
+    '```text',
+    'LIVE_VENUE: `ralph-continue-on-merge.yml` runs on every PR.',
+    '```',
+  ].join('\n');
+  assert.deepEqual(findDemotedChecks(text, TOKENS), []);
+});
+
+/* ─────────────────────────────────────────── the exit code IS the contract with preflight.mjs */
+
+/**
+ * Nothing else in this suite spawns the CLI, so nothing else asserts the exit code — and a critic's
+ * mutation of `const failed = open.length || …` to `false` passed all 46 tests. The exit code is the
+ * only thing `preflight.mjs` reads. It is the one value that must never silently become 0.
+ */
+const CLI = new URL('./docs-stale-check.mjs', import.meta.url);
+
+function runCli(root) {
+  return spawnSync(process.execPath, [fileURLToPath(CLI), '--root', root], { encoding: 'utf8' });
+}
+
+function scratchRepo({ docText }) {
+  const root = mkdtempSync(join(tmpdir(), 'docs-stale-cli-'));
+  writeFileSync(join(root, 'package.json'), JSON.stringify({ scripts: { proof: 'true' } }));
+  mkdirSync(join(root, '.github', 'workflows'), { recursive: true });
+  writeFileSync(
+    join(root, '.github', 'workflows', 'proof-baseline.yml'),
+    ['name: PROOF baseline', 'on:', '  workflow_dispatch:', 'jobs:', '  proof-baseline:', '    name: proof baseline'].join('\n'),
+  );
+  mkdirSync(join(root, 'docs', 'projects'), { recursive: true });
+  writeFileSync(join(root, 'docs', 'projects', 'x-master.md'), docText);
+  return root;
+}
+
+test('CLI exits 1 on an open-programme finding and 0 when there is none', () => {
+  const dirty = scratchRepo({
+    docText: ['ACTIVE_SLICE: X-1', '', '### X-1 — live', '', 'Run npm run gone:forever now.'].join('\n'),
+  });
+  const clean = scratchRepo({
+    docText: ['ACTIVE_SLICE: none', '', '### X-1 — done', '', 'We ran npm run gone:forever.'].join('\n'),
+  });
+  try {
+    const red = runCli(dirty);
+    assert.equal(red.status, 1, `open finding must exit 1\n${red.stdout}`);
+    assert.match(red.stdout, /STALE IN AN OPEN PROGRAMME/);
+
+    const green = runCli(clean);
+    assert.equal(green.status, 0, `closed-only findings must exit 0\n${green.stdout}`);
+    assert.match(green.stdout, /CLOSED \/ NO-DASHBOARD/);
+  } finally {
+    rmSync(dirty, { recursive: true, force: true });
+    rmSync(clean, { recursive: true, force: true });
+  }
+});
+
+test('CLI exits 0 with no docs/projects, and says so rather than passing quietly', () => {
+  const root = mkdtempSync(join(tmpdir(), 'docs-stale-cli-'));
+  try {
+    const r = runCli(root);
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /Nothing to check/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 /* ───────────────────────────────────────────────────────────────────────────── repo integration */

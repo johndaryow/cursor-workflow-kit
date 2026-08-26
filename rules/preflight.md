@@ -90,7 +90,7 @@ that is no longer true. Three classes, and only three:
 | Class | What it catches |
 |---|---|
 | **A** | `npm run <x>` where `<x>` is not in `package.json` |
-| **B** | an exit test or slice block naming a GitHub check that no longer runs on a pull request |
+| **B** | an exit test, slice block, or **`## STATUS DASHBOARD`** naming a GitHub check that no longer runs on a pull request |
 | **C** | a `HOLD:` line with no machine-readable `HOLD_UNTIL:` gate |
 
 **Severity depends on whether the programme is open, and that is the whole design.** A doc with
@@ -116,6 +116,13 @@ A finding this repo has looked at and cannot fix yet goes in
 kit-owned. Printed every run, exactly like a ratchet baseline, and an entry that matches nothing is
 reported rather than failed — fixing something must never turn the build red. **Never add an entry
 to go green.**
+
+**The dashboard counts, and counts most.** §4 sends every execution session to read *"the master
+doc's `## STATUS DASHBOARD` block, and only that block"*, so a false claim there is read by more
+sessions than one buried in §12. Its history-carrying fields — `KNOWN_TRAP_*`, `BLOCKED_BY_NOTE`,
+`LAST_SOAK`, `LAST_MERGED_PR`, `LAST_DIGEST` — are exempt: a `KNOWN_TRAP` describing a check that
+was demoted is the write-up *of* the demotion, not rot. A log entry or a `KNOWN_TRAP` outside the
+dashboard is out of scope for class B for the same reason.
 
 It does not check file links; `npm run docs:check-paths` already owns those.
 

@@ -187,6 +187,22 @@ export function programmeStatus(text) {
 /* ──────────────────────────────────────────────────────────────────────────────────────── regions */
 
 const SLICE_HEADING = /^#{2,4}\s+(?:\d+\.\s+)?([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+[a-z]?)\b/;
+const DASHBOARD_HEADING = /^#{1,4}\s+STATUS DASHBOARD\b/i;
+
+/**
+ * Dashboard fields that CARRY HISTORY rather than instructions.
+ *
+ * The dashboard is the most live block in a master doc, but a handful of its fields are explicitly
+ * a record: `KNOWN_TRAP_*` entries exist to describe things that WERE true and broke, and naming the
+ * demoted workflow is the entire point of the entry. `afkf-master.md`'s `KNOWN_TRAP_30` is the
+ * sharpest case — it is the write-up OF the demotion this class exists to catch, and flagging it
+ * would report the repository's own accurate history as rot.
+ *
+ * Measured 2026-08-26 across both repos: the dashboard block yields 3 class-B candidates in open
+ * programmes, 2 of them `KNOWN_TRAP_*` and 1 a real miss. This list is exactly what separates them,
+ * and it is kept short deliberately — a field added here stops being checked.
+ */
+const HISTORY_FIELDS = /^(KNOWN_TRAP_\w+|BLOCKED_BY_NOTE|LAST_SOAK|LAST_MERGED_PR|LAST_DIGEST)\s*:/;
 
 /**
  * A slice heading that says this slice is FINISHED AND KEPT FOR THE RECORD.
@@ -206,8 +222,10 @@ const SLICE_HEADING = /^#{2,4}\s+(?:\d+\.\s+)?([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+
  * than fussy. `PROOF-3`'s body opens with **"Shipped 2026-08-08 in PR #1580."** — every finished
  * slice's body says it shipped. Its heading does not carry the marker, so its two false claims about
  * `pull_request` stay live and stay failing, which is correct: they are the ones this run must fix.
- * Measured on 2026-08-26: 11 of 221 slice headings in open programmes carry a marker. It is a real
- * convention, used sparingly.
+ * Measured on 2026-08-26 by `scanRegions` itself, after a hand-rolled `grep` first answered 221: 11
+ * of 260 slice regions in open programmes carry a marker. It is a real convention, used sparingly.
+ * (A stale count inside the anti-stale checker was found by a critic. Counting with the same code
+ * that does the scanning is the only way this number stays true.)
  */
 const SLICE_DONE = /✅|\(record only\)/;
 const EXIT_SECTION_HEADING = /^#{1,4}\s+.*\bexit tests?\b/i;
@@ -223,13 +241,22 @@ const EXIT_LINE = /^\s*(?:[-*|>]\s*)*(?:\*\*)?Exit\s+(?:E-[A-Z]\b|tests?\b)/i;
  * class exists to catch. Measured: unscoped, 8 candidates of which 6 were history; scoped, 3, all
  * real.
  *
+ * THE STATUS DASHBOARD IS A LIVE REGION, AND IT IS THE MOST LIVE ONE THERE IS. `AGENTS.md` §4 sends
+ * every execution session to read "the master doc's `## STATUS DASHBOARD` block, and only that
+ * block". A false assertion there is read by more sessions than one buried in §12, so it is worth
+ * more, not less. This was missed by the first draft and found by a critic: `proof-master.md`'s
+ * `LIVE_VENUE:` line said `proof-live.yml` runs "on every PR" months after it became
+ * `workflow_dispatch`, in an OPEN programme, in the one block agents are told to trust.
+ *
+ * Its history-carrying fields are excluded — see `HISTORY_FIELDS`.
+ *
  * FENCES ARE TRACKED, AND THAT IS NOT A DETAIL. A §12 slice block is one ```text fence containing
  * `## Scope`, `## Exit tests`, `## MUST NOT` as PLAIN TEXT. Treating those as real headings ends
  * the slice region at its first subsection and drops the scope lines — which is exactly where
  * AFKF-1 asserts `kit-drift.yml` "runs on push and PR". First draft did that and missed it.
  *
  * @param {string} text
- * @returns {{kind:'slice'|'exit-section'|'exit-line', label:string, done:boolean, lines:{n:number,text:string}[]}[]}
+ * @returns {{kind:'slice'|'dashboard'|'exit-section'|'exit-line', label:string, done:boolean, lines:{n:number,text:string}[]}[]}
  */
 export function scanRegions(text) {
   const lines = text.split('\n');
@@ -250,6 +277,7 @@ export function scanRegions(text) {
     if (fence === null && /^#{1,6}\s/.test(line)) {
       const slice = SLICE_HEADING.exec(line);
       if (slice) current = { kind: 'slice', label: slice[1], done: SLICE_DONE.test(line), lines: [] };
+      else if (DASHBOARD_HEADING.test(line)) current = { kind: 'dashboard', label: 'STATUS DASHBOARD', done: false, lines: [] };
       else if (EXIT_SECTION_HEADING.test(line)) {
         current = { kind: 'exit-section', label: line.replace(/^#+\s*/, '').trim(), done: false, lines: [] };
       } else current = null;
@@ -447,6 +475,7 @@ export function findDemotedChecks(text, tokens) {
   const findings = [];
   for (const region of scanRegions(text)) {
     for (const { n, text: line } of region.lines) {
+      if (region.kind === 'dashboard' && HISTORY_FIELDS.test(line.trim())) continue;
       if (!PR_CLAIM.test(line)) continue;
       const lower = line.toLowerCase();
       const hits = tokens.filter((t) => !t.runsOnPr && lower.includes(t.key));
@@ -583,9 +612,19 @@ export function acceptedOf(root) {
  * @param {{doc:string,klass:string,slice?:string,command?:string,checks?:string[]}} finding
  */
 export function acceptanceMatches(entry, finding) {
+  /**
+   * A REASON IS REQUIRED, AND THAT IS THE WHOLE DIFFERENCE BETWEEN A RATCHET AND A MUTE BUTTON.
+   *
+   * The file's comment said "every entry carries a reason" and nothing enforced it, so a bare
+   * `{doc, klass, key}` silently turned an open-programme failure green and printed
+   * `why not fixed: undefined`. Found by a critic, who ran it rather than reading it. "Never add an
+   * entry to go green" has to be a check, not a sentence — the rest of this file refuses exactly
+   * this shape everywhere else (a bare `superseded` marker suppresses nothing, for the same reason).
+   */
+  if (!entry?.reason || !String(entry.reason).trim()) return false;
   if (entry?.doc !== finding.doc || entry?.klass !== finding.klass) return false;
   const key = finding.klass === 'A' ? finding.command : finding.klass === 'C' ? finding.slice : (finding.checks ?? []).join(',');
-  return entry?.key === key;
+  return key !== undefined && entry?.key === key;
 }
 
 /** Package.json script names, or an empty set when there is no package.json. */
@@ -739,8 +778,17 @@ function main() {
     }
   }
   if (unusedAcceptances.length) {
-    console.log(`\n${unusedAcceptances.length} acceptance entry/entries no longer match anything — delete them:`);
-    for (const e of unusedAcceptances) console.log(`  ${e.doc} [${e.klass}] ${e.key}`);
+    const reasonless = unusedAcceptances.filter((e) => !e?.reason || !String(e.reason).trim());
+    const stale = unusedAcceptances.filter((e) => !reasonless.includes(e));
+    if (reasonless.length) {
+      console.log(`\n${reasonless.length} acceptance entry/entries have NO REASON and therefore accept nothing:`);
+      console.log('An entry without a reason is a mute button. Give it one, or delete it.');
+      for (const e of reasonless) console.log(`  ${e.doc} [${e.klass}] ${e.key}`);
+    }
+    if (stale.length) {
+      console.log(`\n${stale.length} acceptance entry/entries no longer match anything — delete them:`);
+      for (const e of stale) console.log(`  ${e.doc} [${e.klass}] ${e.key}`);
+    }
   }
 
   const failed = open.length || (strict && other.length);

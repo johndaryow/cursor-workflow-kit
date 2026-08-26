@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 const KIT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Rules the kit does not own yet but that are universal workflow, not product. */
-export const UNIVERSAL_RULE_ADDITIONS = ['planning-chain-handoff'];
+export const UNIVERSAL_RULE_ADDITIONS = [];
 
 /**
  * Actions the kit does not ship yet. Deliberately short: every Action added here
@@ -90,15 +90,27 @@ export const EXCLUDE_PATTERNS = [
   /(^|\/)theme-deploy(-|\/|\.)/,
 ];
 
-/** kit dir -> repo dir. Mirrors install.sh, which is what actually seeds a repo. */
+/**
+ * kit dir -> repo dir. Mirrors install.sh, which is what actually seeds a repo.
+ *
+ * There used to be four rows here for two trees — `claude/rules` + `cursor/rules` and
+ * `claude/skills` + `cursor/skills` — because every workflow file was written twice, in two
+ * dialects, and hash-locked to itself. That is what made a two-line fix expensive enough that five
+ * rules were written to overrule other rules instead. One rulebook (`AGENTS.md`), one rules tree
+ * (`docs/rules/`), one skills tree (`.claude/skills/`, symlinked from `.cursor` and `.agents`).
+ */
 export const GROUPS = [
-  { kind: 'rule', kitDir: 'claude/rules', repoDir: '.claude/rules', ext: '.md' },
-  { kind: 'rule', kitDir: 'cursor/rules', repoDir: '.cursor/rules', ext: '.mdc' },
-  { kind: 'skill', kitDir: 'claude/skills', repoDir: '.claude/skills' },
-  { kind: 'skill', kitDir: 'cursor/skills', repoDir: '.cursor/skills' },
+  { kind: 'rule', kitDir: 'rules', repoDir: 'docs/rules', ext: '.md' },
+  { kind: 'skill', kitDir: 'skills', repoDir: '.claude/skills' },
   { kind: 'script', kitDir: 'scripts', repoDir: 'scripts' },
   { kind: 'action', kitDir: 'optional/github-workflows', repoDir: '.github/workflows' },
 ];
+
+/**
+ * `AGENTS.md` is shipped as `templates/AGENTS.md` and is deliberately NOT in the manifest: section 6
+ * is repo-specific, so a hash check would fail in every repo that filled it in honestly. The kit owns
+ * the shape; the repo owns the facts.
+ */
 
 /**
  * Every script that reaches a seed root through relative imports, plus that

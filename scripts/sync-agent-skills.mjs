@@ -1,56 +1,57 @@
 #!/usr/bin/env node
 /**
- * Mirror .cursor/skills → .agents/skills for Cursor discovery (web + CLI).
- * Run after editing repo skills: npm run sync:agent-skills
+ * Skills are written ONCE, in `.claude/skills/`.
+ *
+ * `.cursor/skills` and `.agents/skills` are symlinks to it, so Cursor and the
+ * `.agents` discovery path see the same files with no copying and no drift. All
+ * three locations sit at the same depth from the repo root, so the relative links
+ * inside a SKILL.md resolve identically through any of them.
+ *
+ * This script used to copy `.cursor/skills` → `.agents/skills` and rewrite links on
+ * the way. It now just asserts the symlinks are intact and repairs them if not.
+ *
+ *   npm run sync:agent-skills            # repair if needed
+ *   npm run sync:agent-skills -- --check # fail instead of repairing (CI)
  */
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = resolve(__dirname, '..');
-const srcRoot = join(root, '.cursor/skills');
-const destRoot = join(root, '.agents/skills');
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const SOURCE = '.claude/skills';
+const MIRRORS = [
+  { path: '.cursor/skills', target: '../.claude/skills' },
+  { path: '.agents/skills', target: '../.claude/skills' },
+];
+const checkOnly = process.argv.includes('--check');
 
-/** Fix relative links that assume .cursor/skills/ parent path. */
-function rewriteContent(text, relFromRoot) {
-  return text
-    .replace(/\]\(\.\.\/\.\.\/rules\//g, '](.cursor/rules/')
-    .replace(/\]\(\.\.\/\.\.\/\.\.\/rules\//g, '](.cursor/rules/')
-    .replace(/\]\(\.\.\/\.\.\/docs\//g, '](docs/')
-    .replace(/\]\(\.\.\/\.\.\/\.\.\/docs\//g, '](docs/')
-    .replace(/\]\(\.\.\/skills\//g, '](.cursor/skills/')
-    .replace(/\]\(\.\.\/\.\.\/skills\//g, '](.cursor/skills/');
-}
-
-function copyTree(srcDir, destDir) {
-  mkdirSync(destDir, { recursive: true });
-  for (const name of readdirSync(srcDir)) {
-    const src = join(srcDir, name);
-    const dest = join(destDir, name);
-    if (statSync(src).isDirectory()) {
-      copyTree(src, dest);
-      continue;
-    }
-    if (!name.endsWith('.md')) {
-      cpSync(src, dest);
-      continue;
-    }
-    const rel = relative(root, dest);
-    writeFileSync(dest, rewriteContent(readFileSync(src, 'utf8'), rel), 'utf8');
-  }
-}
-
-if (!existsSync(srcRoot)) {
-  console.error('Missing .cursor/skills/ — nothing to sync');
+if (!existsSync(join(root, SOURCE))) {
+  console.error(`Missing ${SOURCE}/ — skills have no source`);
   process.exit(1);
 }
 
-if (existsSync(destRoot)) {
-  rmSync(destRoot, { recursive: true, force: true });
+let repaired = 0;
+let broken = 0;
+
+for (const { path, target } of MIRRORS) {
+  const abs = join(root, path);
+  const isLink = existsSync(abs) && lstatSync(abs).isSymbolicLink();
+  if (isLink && readlinkSync(abs) === target) continue;
+
+  broken += 1;
+  const why = !existsSync(abs) ? 'missing' : isLink ? `points at ${readlinkSync(abs)}` : 'is a real directory (a copy — this is the drift)';
+  if (checkOnly) {
+    console.error(`FAIL: ${path} ${why}; expected a symlink → ${target}`);
+    continue;
+  }
+  if (existsSync(abs) || isLink) rmSync(abs, { recursive: true, force: true });
+  mkdirSync(dirname(abs), { recursive: true });
+  symlinkSync(target, abs);
+  console.log(`repaired: ${path} → ${target} (was ${why})`);
+  repaired += 1;
 }
 
-copyTree(srcRoot, destRoot);
+if (checkOnly && broken) process.exit(1);
 
-const count = readdirSync(destRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).length;
-console.log(`sync-agent-skills: mirrored ${count} skills → .agents/skills/`);
+const count = readdirSync(join(root, SOURCE), { withFileTypes: true }).filter((d) => d.isDirectory()).length;
+console.log(`sync-agent-skills: ${count} skills in ${SOURCE}/, ${MIRRORS.length} mirrors OK${repaired ? ` (${repaired} repaired)` : ''}`);

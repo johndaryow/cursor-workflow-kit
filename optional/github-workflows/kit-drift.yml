@@ -22,10 +22,22 @@
 
 name: kit drift
 
+# The per-push and per-PR triggers were removed on 2026-08-26 (WORKFLOW-P36). These checks now run
+# in the agent session via `npm run preflight` — on the same commit, minutes before the push — and
+# again on `main` after the squash via `main-guard.yml`. Running them a third time on every PR was
+# paying twice for one answer, and on a private repository those minutes are metered.
+#
+# Still runnable by hand: Actions -> this workflow -> Run workflow.
+# Demoted to manual on 2026-08-26 (WORKFLOW-P36). `npm run preflight` runs
+# `scripts/kit-drift-check.mjs` in the agent session before every push, and `main-guard.yml` runs
+# preflight again on `main` after the squash. A third run on every push was paying twice.
+#
+# The kit repository keeps its own push/PR copy in its .github/ — it is public, so its minutes are
+# free, and its drift is worth catching on the PR that causes it.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
+
+
 
 concurrency:
   group: kit-drift-${{ github.ref }}

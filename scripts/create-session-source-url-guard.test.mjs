@@ -10,7 +10,7 @@
  *  2. A scan of the REAL repository. This is the assertion with teeth: if anyone deletes
  *     `source_url` from a rule or a skill, or writes a new snippet without it, this fails.
  *     It already earned its keep — on its first run it found the Cursor twin of the rule,
- *     `.cursor/rules/planning-chain-handoff.mdc`, still carrying the pre-P25 snippet.
+ *     `docs/rules/planning-chain.md`, still carrying the pre-P25 snippet.
  */
 import assert from 'node:assert/strict';
 import {
@@ -30,17 +30,18 @@ assert.equal(
     live.violations.map((v) => `  ${v.file}:${v.line}`).join('\n') +
     '\nA session created without it opens with an empty working directory.',
 );
-assert.ok(live.calls >= 2, 'the guard must actually be finding the known snippets, not scanning nothing');
+// Was >= 2, when the hand-off rule existed as two hand-synced twins. It is one file now, so one
+// documented call shape is the whole population. The assertion still does its job: it fails if the
+// guard is scanning nothing, which is how a guard silently stops guarding.
+assert.ok(live.calls >= 1, 'the guard must actually be finding the known snippet, not scanning nothing');
 assert.ok(filesToScan().length > 100, 'the scan must reach the rules, skills and scripts trees');
 
-// Both twins of the hand-off rule carry the field — they drift by hand, so both are checked.
+// The hand-off rule is one file now, not two hand-synced twins.
 assert.equal(violationsInSource('x', 'x').length, 0);
-for (const twin of ['.claude/rules/planning-chain-handoff.md', '.cursor/rules/planning-chain-handoff.mdc']) {
-  assert.ok(
-    filesToScan().some((f) => f.endsWith(twin.replace(/^\./, '.'))),
-    `${twin} must be inside the scanned tree`,
-  );
-}
+assert.ok(
+  filesToScan().some((f) => f.endsWith('docs/rules/planning-chain.md')),
+  'docs/rules/planning-chain.md must be inside the scanned tree',
+);
 
 // ---- a call with no source_url is a violation -------------------------------
 const bad = `

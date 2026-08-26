@@ -1,0 +1,96 @@
+# MAIN GUARD — the one check GitHub still runs on code, and the reason it exists.
+#
+# Every other pull_request check moved into `npm run preflight`, which the agent session runs on
+# the same commit minutes before pushing. Re-running them on GitHub was paying twice for one
+# answer, and on a private repository those minutes are metered.
+#
+# This one cannot move, and it is not a duplicate of preflight:
+#
+#   A squash merge produces a tree that NO pull request run ever tested. Two PRs that are each
+#   green can produce a broken `main` between them. That is exactly when a silent breakage lands,
+#   and there is no agent session alive at merge time to notice.
+#
+# So: nothing on pull_request, everything on `main` after the squash, on a clean machine.
+name: main guard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Only the newest `main` matters. Cancel a superseded run rather than pay for it.
+  group: main-guard
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A docs-only merge cannot break the build. Short-circuit INSIDE the job, never with
+      # paths-ignore at the top of the file: a filtered-out workflow never reports at all, and a
+      # check that does not report is indistinguishable from one that has not finished.
+      - name: Is there any code in this merge?
+        id: scope
+        run: |
+          changed=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qvE '^(docs/|.*\.md$)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "docs-only merge — the suite is skipped, and this check still reports."
+          fi
+
+      # .nvmrc when the repo has one, otherwise the version this workflow was written against.
+      # Hard-wiring node-version-file fails the whole guard in a repo that never adopted .nvmrc.
+      - name: Pick the node version
+        if: steps.scope.outputs.code == 'true'
+        id: node
+        run: |
+          if [ -f .nvmrc ]; then
+            echo "version=$(tr -d 'v \n' < .nvmrc)" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=22" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.code == 'true'
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: npm
+
+      - name: Install
+        if: steps.scope.outputs.code == 'true'
+        run: npm ci --no-audit --no-fund
+
+      # --full, and that flag is the point.
+      #
+      # `npm run preflight` skips the slow browser suites by default, because a session runs it
+      # before every push and a browser build there would cost minutes on every iteration. That
+      # made this the ONLY automatic venue for them once the per-PR workflows were demoted — and
+      # the first version of this file ran bare `npm run preflight`, which meant the browser proof
+      # ran nowhere at all. A fresh critic caught it; the flag is the fix.
+      #
+      # Once per merge, on a clean machine, against the squashed tree nobody has tested yet.
+      - name: Preflight on the merged tree — everything, including the slow suites
+        if: steps.scope.outputs.code == 'true'
+        run: npm run preflight -- --full
+
+      # The CI spend meter. It reads the billing API and needs secrets that exist only here, so
+      # unlike the test suites it genuinely cannot move into the agent session. Optional: repos
+      # without the script skip it rather than fail. continue-on-error — a measurement must never
+      # be able to fail the guard it is measuring.
+      - name: Refresh the CI spend ceiling
+        if: steps.scope.outputs.code == 'true' && hashFiles('scripts/afkf-ci-ceiling.mjs') != ''
+        continue-on-error: true
+        env:
+          AFKF_CI_PAT: ${{ secrets.AFKF_CI_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/afkf-ci-ceiling.mjs --refresh

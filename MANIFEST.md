@@ -55,9 +55,18 @@ and says the repo moved.
 
 ## Tier 1 — Required (minimum viable workflow)
 
-**You get this in `cursor/skills/` + `cursor/rules/` + User Rule (Cursor), and `claude/skills/` + `claude/rules/` + `CLAUDE.md` (Claude Code).**
+**One rulebook, three agents.** `templates/AGENTS.md` → `AGENTS.md` at the repo root is the **only**
+always-on file. Codex and Cursor read it natively; Claude Code imports it from a three-line
+`CLAUDE.md`. Every rule body lives once in `rules/` → `docs/rules/`, read on demand from the index in
+§7 of the rulebook. Skills live once in `skills/` → `.claude/skills/`, with `.cursor/skills` and
+`.agents/skills` as **symlinks** to it.
 
-### Skills (11 — mirrored in `cursor/skills/` and `claude/skills/`, same `SKILL.md` format)
+Until 2026-08-26 the kit shipped all of this twice, in two dialects, hash-locked to each other. The
+cost was not the disk space: a repo that could not reach the kit could not fix a rule, so it wrote a
+**second rule saying the first was wrong**. Five such rules accumulated in `pp-workspace`, and every
+session read both sides of five disagreements before it read the task. One copy is the fix.
+
+### Skills (11 — in `skills/`, installed to `.claude/skills/`, symlinked from `.cursor` and `.agents`)
 
 | Skill | One line |
 |-------|----------|
@@ -73,26 +82,43 @@ and says the repo moved.
 | `improve-codebase` | Architecture planning only |
 | `handoff` | Emergency mid-slice only |
 
-### Rules (9 — `alwaysApply` in Cursor / imported into `CLAUDE.md` in Claude Code, or load on demand)
+### The rulebook (1, always-on)
 
-| Cursor rule (`cursor/rules/*.mdc`) | Claude Code rule (`claude/rules/*.md`) | One line |
-|------|------|----------|
-| `workflow-core.mdc` | `workflow-core.md` | Planning vs AFK; doc-as-controller; chain |
-| `ceo-communication.mdc` | `ceo-communication.md` | Outcome-first plain English for founder |
-| `auto-merge-policy.mdc` | `auto-merge-policy.md` | Agent merges AFK when tests green |
-| `agent-chat-session.mdc` | `agent-chat-session.md` | Chat naming; Continue / status behavior |
-| `hitl-afk-slices.mdc` | `hitl-afk-slices.md` | AUTONOMY / CEO_GATE / MERGE_POLICY tags |
-| `session-report-format.mdc` | `session-report-format.md` | PR report template — on demand |
-| `manual-task-guidance.mdc` | `manual-task-guidance.md` | One step when CEO must click vendor UI — on demand |
-| `cost-estimate-before-action.mdc` | `cost-estimate-before-action.md` | Estimate before expensive cloud ops — on demand |
-| `pair-debugging.mdc` | `pair-debugging.md` | Agent owns fix; CEO one browser step max — on demand |
+`templates/AGENTS.md` — ~1,200 words. Who the work is for and how to talk to them, how to pick a
+route, the four sentences that control the chain, how a slice runs, the stop list, a repo-specific
+section the repo owns, and an index of what to read when. Section 6 is the only part you fill in.
 
-The first five are `alwaysApply: true` in Cursor and are `@`-imported into `claude/CLAUDE.md` for Claude Code — both load every session. The last four are `alwaysApply: false` / loaded on demand in Cursor, and in Claude Code are read by a skill (or the agent) only when the situation calls for it — not imported into `CLAUDE.md`, to avoid spending context every session.
+It is deliberately **not** in `kit-manifest.json`: a hash check would fail in every repo that filled
+in section 6 honestly. The kit owns the shape; the repo owns the facts.
+
+### Rules (8, on demand — `rules/` → `docs/rules/`)
+
+| Rule | One line |
+|------|----------|
+| `merging.md` | Agent merges AFK when green; `--wait`; what to do when the venue cannot merge |
+| `reporting.md` | Success is silent; the SESSION REPORT template; the daily digest |
+| `planning-chain.md` | Claim → grill → PRD → slices; the merge launches the next step; net lines |
+| `slice-tags.md` | AUTONOMY / CEO_GATE / MERGE_POLICY |
+| `manual-task-guidance.md` | One step at a time when a human must click a vendor UI |
+| `cost-estimate-before-action.md` | Estimate before expensive cloud ops |
+| `pair-debugging.md` | Agent owns the fix; the human gets one browser step |
+| `history.md` | The incident behind each rule above. Never read per session; linked from the rule it bought |
+
+**Nothing here is always-on.** They are reached from the index in §7 of `AGENTS.md` when the
+situation calls for one, which is what keeps the per-session cost at one page instead of twenty-five.
+
+**A rule must never overrule another rule.** If two disagree, edit the kit and delete the loser —
+that is what the kit being the source is *for*. A test in `pp-workspace` fails any rule containing
+"this file is the canon" or "By-hand item for the kit".
 
 ### User Rule / CLAUDE.md (1 each)
 
-- **Cursor:** paste `templates/workflow-user-rules-canonical.md` into **Cursor → Customize → Rules → User**.
-- **Claude Code:** `install.sh` writes `claude/CLAUDE.md` to your repo root as `CLAUDE.md` (skips if one already exists — merge `templates/CLAUDE-workflow-snippet.md` into it instead).
+- **All three agents:** `install.sh` writes `templates/AGENTS.md` to your repo root as `AGENTS.md`
+  (skipped if one exists — compare by hand, since section 6 is yours).
+- **Claude Code:** `templates/CLAUDE.md` → `CLAUDE.md`, three lines that import `AGENTS.md`.
+- **Cursor:** `templates/cursor/000-agents.mdc` → `.cursor/rules/`, an `alwaysApply` pointer at
+  `AGENTS.md`. Cursor reads `AGENTS.md` natively too; this is belt and braces.
+- **Codex:** nothing to install — it reads `AGENTS.md`.
 
 ### Doc template (1)
 
@@ -106,7 +132,7 @@ The first five are `alwaysApply: true` in Cursor and are `@`-imported into `clau
 
 | Script | npm script | Purpose |
 |--------|------------|---------|
-| `sync-agent-skills.mjs` | `sync:agent-skills` | Mirror `.cursor/skills` → `.agents/skills` |
+| `sync-agent-skills.mjs` | `sync:agent-skills` | Assert (and repair) the `.cursor/skills` + `.agents/skills` symlinks |
 | `mc-status.mjs` | `mc:status` | Print STATUS + CHAT_RENAME |
 | `mc-opener.mjs` | `mc:opener` | What slice to run next |
 | `mc-chat-meta.mjs` | (internal) | Parse STATUS fields |
@@ -142,7 +168,7 @@ The first five are `alwaysApply: true` in Cursor and are `@`-imported into `clau
 
 **Customize:** Edit `ralph-chain-config.mjs` — remove PP Workers/S6b maps; add your program’s serial chain or rely on doc-only registry.
 
-**Claude Code gap:** `ralph-continue-on-merge.yml` calls the **Cursor Cloud Agent API** to start the next agent — there's no Claude Code equivalent wired up in this kit. Everything upstream of that one API call (`mc:ralph-chain`, the STATUS dashboard, `AFK_QUEUE`) is agent-agnostic and works the same from either tool. From Claude Code, chain slices by saying "Continue" in a fresh session, or build your own trigger using Claude Code's session/Routine APIs if you want it automatic. See [`claude/skills/ralph-loop/SKILL.md`](./claude/skills/ralph-loop/SKILL.md).
+**Claude Code gap:** `ralph-continue-on-merge.yml` calls the **Cursor Cloud Agent API** to start the next agent — there's no Claude Code equivalent wired up in this kit. Everything upstream of that one API call (`mc:ralph-chain`, the STATUS dashboard, `AFK_QUEUE`) is agent-agnostic and works the same from either tool. From Claude Code, chain slices by saying "Continue" in a fresh session, or build your own trigger using Claude Code's session/Routine APIs if you want it automatic. See [`skills/ralph-loop/SKILL.md`](./skills/ralph-loop/SKILL.md).
 
 ---
 

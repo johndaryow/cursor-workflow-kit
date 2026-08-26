@@ -1,0 +1,15 @@
+---
+description: The one always-on rulebook — AGENTS.md at the repo root, shared by Claude Code, Cursor and Codex
+alwaysApply: true
+---
+
+# Read `AGENTS.md`
+
+The rulebook for this repo is [`AGENTS.md`](../../AGENTS.md) at the root. It is the **only** always-on
+file, and it is shared by Claude Code, Cursor and Codex.
+
+Every other rule is read on demand from [`docs/rules/`](../../docs/rules/), using the index in §7 of
+`AGENTS.md`. There are no `.cursor`-specific copies any more — a rule is written once.
+
+**Cursor specifics:** skills live in `.cursor/skills/` (the same files as `.claude/skills/`); branch
+prefix is `cursor/<name>-<id>`.

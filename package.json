@@ -7,6 +7,8 @@
   "scripts": {
     "kit:drift": "node scripts/kit-drift-check.mjs",
     "kit:manifest": "node scripts/kit-manifest-build.mjs",
-    "test:kit-drift": "node scripts/kit-drift-check.test.mjs"
+    "test:kit-drift": "node scripts/kit-drift-check.test.mjs",
+    "docs:stale": "node scripts/docs-stale-check.mjs",
+    "test:docs-stale": "node scripts/docs-stale-check.test.mjs"
   }
 }

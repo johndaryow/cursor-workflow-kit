@@ -43,16 +43,23 @@ description: Executes one AFK slice from master doc STATUS and NEXT_PROMPT — v
 5. If `MERGE_POLICY: auto_when_green` and all exit PASS → `npm run mc:auto-merge -- <pr> --wait 15`
    (or the GitHub MCP merge tool). **Always pass `--wait`** — a young PR reports zero checks, and zero
    checks is a refusal. Never hand-roll a CI wait ([`merging.md`](../../../docs/rules/merging.md)).
-6. Post-merge: scoped deploy + spot-check if required
+6. **The merge is not the finish line — same session, keep going.** Post-merge: scoped deploy +
+   spot-check when the slice touched anything a venue serves. Measured 2026-08-27: four slices
+   merged green promising a production deploy and none of them reached the live app, because the
+   sentence that used to say this was always in front of every agent and is now one page away.
+   Where the repo carries a deploy-debt check, it must say **none owed** before you stop; where it
+   does not, the deploy is still yours. Not deploying yet is a fine answer and must be a **written**
+   one, in the programme's own `DEPLOY_AFTER_MERGE`. Never silence.
 7. Advance `AFK_QUEUE` in STATUS if slice complete
-8. **Then stop — say nothing in chat.** The whole SESSION REPORT lives in the PR body, next prompt
-   included; the merge launches the next slice. No chat summary, no PR link, no "Continue"
-   ([`reporting.md`](../../../docs/rules/reporting.md)).
+8. **Then stop — say nothing in chat.** Stop after step 7, not at the merge. The whole SESSION
+   REPORT lives in the PR body, next prompt included; the merge launches the next slice. No chat
+   summary, no PR link, no "Continue" ([`reporting.md`](../../../docs/rules/reporting.md)).
 9. **Chain:** see [`ralph-loop`](../ralph-loop/SKILL.md) for how the next slice gets picked up — mechanism differs between Cursor (GitHub Action → Cloud Agent) and Claude Code (the cold-start prompt above or a scheduled Routine). **Do not** trigger the next agent yourself from inside the slice session (duplicate risk).
 
 ## MUST NOT
 
 - **Push without a green `npm run preflight`** — nothing on GitHub re-checks a PR any more
+- **Stop at the merge** with a deploy owed and nothing written down saying why
 - **Judge your own diff** instead of spawning a fresh critic — same context, same blind spot
 
 - Expand scope beyond MUST NOT lines in prompt

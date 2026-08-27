@@ -252,3 +252,36 @@ is what makes them a bar rather than a mood.
 A pick, never a score: scores drift upward every round — 7, then 7.5, then "8, good enough" — and
 nothing ever fails. Two rounds, then stop: a third round optimises the critic's opinion rather than
 the work.
+
+## The deploy nobody was asking about
+
+**2026-08-27.** The CEO asked why FTAG was not on the live site. Four slices had merged over two
+days, all green, all promising `pages:production` on their own dashboards. The newest production
+deployment was older than every one of them. Nothing had gone red, and nothing had said anything.
+
+**The first answer was wrong, and wrong in an instructive way:** *nothing was disabled — there has
+never been a deploy job on GitHub.* True, and not the question. The CEO's own theory was right —
+something HAD changed. Until the day before, an always-on rule carried a section headed *After
+auto-merge* that opened `Agent continues same session (do not stop at merge)` and then listed the
+deploy. The one-rulebook change moved that sentence, word for word, into
+[`merging.md`](./merging.md) — a page an agent opens *before* a merge and seldom after one. The
+instruction never disappeared. It stopped being unavoidable, which for an instruction is the same
+thing.
+
+**The older fault was the one that let it stay hidden.** `DEPLOY_AFTER_MERGE` appeared 141 times
+across the master docs and was read by **zero lines of code**. A field no machine reads is a note; a
+promise nothing checks is not a promise. That hole predated the rewrite by a year and cost nothing
+the whole time the instruction was unmissable — which is exactly how a dormant gap gets found: not
+when it is created, but when the thing quietly covering it moves.
+
+**Rule that came from it:** the merge is not the finish line, and something asks. `deploy:owed`
+compares the live deployment against the commits that change what it contains, attributes each one
+to the programme whose slice id it names, and goes red unless that programme either deployed or
+wrote `deferred <why>` in its own field. Deploy venues stay repo-local (AFKF-D24), so the check is
+too; what the kit owns is the sentence that the session does not end at the merge.
+
+**The general lesson, which is not about deploys.** Consolidating thirteen always-on rules into one
+was right and the measurements backed it. What went unmeasured was which sentences were doing work
+*because* they were unavoidable. Moving prose to a library is free only for prose nobody had to act
+on at a particular moment. Anything that must happen at a moment belongs to a machine — or it
+belongs in the file that is always open.

@@ -544,8 +544,8 @@
       "repoPath": ".github/workflows/main-guard.yml",
       "kind": "action",
       "check": "hash",
-      "sha256": "c40e9d15342705f10f15923d2206206fe5595a150419defff8e380b293541062",
-      "updatedAt": "2026-08-26T22:06:42+08:00"
+      "sha256": "cf28cadb6dd39bb126f03ca0885edb750fa05a6a37550da10902f1b5331b4db5",
+      "updatedAt": "2026-08-27T14:11:09+08:00"
     },
     {
       "kitPath": "optional/github-workflows/ralph-chain-test.yml",

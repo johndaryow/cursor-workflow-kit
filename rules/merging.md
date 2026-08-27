@@ -110,6 +110,17 @@ is not consent; any human gate in the body wins; a real slice id sends it back t
 Do not stop at the merge. Scoped deploy → spot-check when UI/deploy was touched → STATUS updated →
 `Merge: PR #n merged: yes (auto)` in the report.
 
+**This sentence used to be in front of every agent, and stopped being.** Until 2026-08-26 it lived in
+an always-on rule under the heading *After auto-merge*, opening `Agent continues same session (do not
+stop at merge)`. The one-rulebook change moved it here — a page opened BEFORE a merge and seldom
+after one. Measured on 2026-08-27: four slices merged green promising a production deploy, and the
+live app was older than all four. Nothing went red, because the field promising the deploy was read
+by no code anywhere. So the check belongs to the machine, not to this paragraph: where the repo has
+a deploy-debt check, it must say **none owed** before the session stops, and where the answer is
+"not yet", the reason goes in that programme's own `DEPLOY_AFTER_MERGE`. A skipped deploy is allowed
+to be a decision; it is never allowed to be silence
+([history](./history.md#the-deploy-nobody-was-asking-about)).
+
 ## Related
 
 [`reporting.md`](./reporting.md) · [`planning-chain.md`](./planning-chain.md) · [`history.md`](./history.md)

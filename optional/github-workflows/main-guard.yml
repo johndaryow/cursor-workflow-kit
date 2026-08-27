@@ -78,8 +78,42 @@ jobs:
       # ran nowhere at all. A fresh critic caught it; the flag is the fix.
       #
       # Once per merge, on a clean machine, against the squashed tree nobody has tested yet.
+      # THE TWO THINGS `--full` NEEDS, AND BOTH ARE PORTS RATHER THAN INVENTIONS.
+      #
+      # This guard absorbed the browser suites from the workflows WORKFLOW-P36 demoted — but it took
+      # their COMMANDS without the two setup steps that made those commands survivable. Measured
+      # 2026-08-27: main-guard had never passed on either repo since the day it was written.
+      #
+      #   1. THE BROWSER. Every workflow that drove a browser installed one first — five of them in
+      #      pp-workspace (`proof-baseline`, `proof-live`, `canvas-proof`, `lnp-live-proof`,
+      #      `nightly-health`) and `pb-foundation-ci` in pp-shopify-theme. The theme's
+      #      `test:pb-fresh-open-presentation` died in 0.7 s on `browserType.launch: Executable
+      #      doesn't exist`. Reproduced locally; the launch clears once a browser is present.
+      #
+      #   2. THE HEAP. `npm run proof` builds the app twice, and that build sits within a few tens
+      #      of megabytes of Node's default ~2 GB heap on this runner. `proof-baseline.yml` has
+      #      carried `--max-old-space-size=4096` for weeks with the diagnosis written beside it.
+      #      Without it, runs 6 and 8 both died `FATAL ERROR: Ineffective mark-compacts near heap
+      #      limit` ~11 minutes in, on unrelated diffs — one a feature slice, one docs plus a
+      #      checker. In pp-workspace the OOM hit during the BUILD, which meant the missing browser
+      #      was hidden behind it: fixing only the heap would have moved the failure one step, not
+      #      removed it.
+      #
+      # Both settings are harmless where they are not needed — a repo whose `--full` drives no
+      # browser pays ~30 s once per merge, and a larger heap ceiling is a ceiling, not a reservation.
+      # That is what lets one kit-owned file serve both repos.
+      #
+      # The shape of the bug is worth more than the fix: a guard that cannot start has tested
+      # nothing, and it reports as if the code were broken — which is worse than not running,
+      # because it looks like a verdict.
+      - name: Install the browser the slow suites drive
+        if: steps.scope.outputs.code == 'true'
+        run: npx playwright install --with-deps chromium
+
       - name: Preflight on the merged tree — everything, including the slow suites
         if: steps.scope.outputs.code == 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run preflight -- --full
 
       # The CI spend meter. It reads the billing API and needs secrets that exist only here, so

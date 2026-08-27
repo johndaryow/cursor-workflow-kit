@@ -110,10 +110,26 @@ jobs:
         if: steps.scope.outputs.code == 'true'
         run: npx playwright install --with-deps chromium
 
+      # THE KEY, AND WHY ITS ABSENCE WAS WORSE THAN A FAILING TEST (WORKFLOW-P40).
+      #
+      # Measured on commit 79922f9 — the same tree, the same command, a clean checkout: the agent
+      # session reported 0 failures and this guard reported 5. FOUR of the five were one line,
+      # `SUPABASE_SERVICE_ROLE_KEY missing`, from suites that read the live chain rows. The
+      # session had the key in `.env.local`; this step was never given it.
+      #
+      # That is the most expensive kind of red there is. It is not a broken build, it looks
+      # exactly like one, and the fix everyone reaches for after a week of it is to stop believing
+      # the guard. The key is already a secret this repository holds — `ralph-continue-on-merge`
+      # passes it to four steps, and the spend meter below already reads it here.
+      #
+      # `preflight.mjs` carries the other half: those four suites now declare `needsEnv`, so a
+      # machine that genuinely has no key says "could not start" and names what it wants, instead
+      # of reporting a defect that does not exist.
       - name: Preflight on the merged tree — everything, including the slow suites
         if: steps.scope.outputs.code == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run preflight -- --full
 
       # The CI spend meter. It reads the billing API and needs secrets that exist only here, so

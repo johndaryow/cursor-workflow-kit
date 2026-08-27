@@ -20,8 +20,21 @@ on:
 
 concurrency:
   # Only the newest `main` matters. Cancel a superseded run rather than pay for it.
+  #
+  # This is safe ONLY because the scope step below measures from the last tree this guard actually
+  # verified. When it measured from the previous push instead, a cancelled run took its subject
+  # with it: the code merge's run was cancelled by the `chore(status)` merge a minute behind it,
+  # and the run that replaced it saw one docs commit and skipped (WORKFLOW-P41, 2026-08-27).
+  # Cancelling now costs runner minutes and never coverage — the newest run inherits the job.
   group: main-guard
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  # The scope step reads this workflow's own run history to find the last commit it verified.
+  # Explicit, because a repository whose default token is restricted would fail that read into
+  # "run everything" — safe, and permanently expensive, and silent about why.
+  actions: read
 
 jobs:
   guard:
@@ -35,17 +48,27 @@ jobs:
       # A docs-only merge cannot break the build. Short-circuit INSIDE the job, never with
       # paths-ignore at the top of the file: a filtered-out workflow never reports at all, and a
       # check that does not report is indistinguishable from one that has not finished.
-      - name: Is there any code in this merge?
+      #
+      # THE RANGE IS THE WHOLE QUESTION, AND IT USED TO BE THE WRONG ONE (WORKFLOW-P41).
+      #
+      # This step used to ask "is there any code in THIS merge?" — `github.event.before`..`sha`,
+      # falling back to `HEAD~1 HEAD`. Both name the previous commit, and the previous commit is
+      # only the right base when the run for it finished. On 2026-08-27 it had not: the code merge's
+      # run was cancelled by the docs merge behind it, the docs merge asked about one markdown file,
+      # and the guard reported a pass in 18 seconds for a tree nothing had ever run. A manual
+      # re-run made it worse — `workflow_dispatch` has no `event.before` at all, so it fell through
+      # to `HEAD~1` and produced the same confident green.
+      #
+      # It now asks the only question with a defensible answer: what has this guard actually
+      # FINISHED verifying? That is the head sha of its most recent successful run on this branch —
+      # published by the guard itself, and never a cancelled one. Not knowing runs the whole suite;
+      # a person pressing the button runs the whole suite. `scripts/guard-scope.mjs` carries the
+      # reasoning and the suite, and runs before setup-node because it is built-ins only.
+      - name: Is there any code this guard has not verified?
         id: scope
-        run: |
-          changed=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -qvE '^(docs/|.*\.md$)'; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "docs-only merge — the suite is skipped, and this check still reports."
-          fi
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/guard-scope.mjs
 
       # .nvmrc when the repo has one, otherwise the version this workflow was written against.
       # Hard-wiring node-version-file fails the whole guard in a repo that never adopted .nvmrc.

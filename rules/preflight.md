@@ -143,6 +143,26 @@ the checks here spends that, so two things buy it back:
 2. **`main-guard` still runs on a clean machine** after the squash, so nothing reaches `main`
    unwatched.
 
+### What "unwatched" means, and the day it did not mean it
+
+The guard has one shortcut: a docs-only merge cannot break the build, so it skips the suite and
+reports in seconds. On **2026-08-27** that shortcut reported a pass for a tree nothing had run.
+
+A slice merges as two commits — the code, then `chore(status)` — and the second cancels the first's
+run, by design, because only the newest `main` matters. The replacement run then asked *is there
+any code in **this** merge?* and compared the previous push: one markdown file. Skip. Green in 19
+seconds, then 18 more for a manual re-run, which had no previous push at all and fell through to
+the last commit — the same markdown file. Eleven files had changed since the last tree the guard
+actually verified, three of them code.
+
+**The range is the guarantee.** The guard now measures from the last commit it FINISHED verifying —
+the head of its most recent successful run, never a cancelled one — so a cancelled run's subject
+transfers to the run that replaced it. Not knowing runs the whole suite: no token, no history, a
+dead API, a base this checkout cannot reach, or a person pressing the button. `scripts/guard-scope.mjs`.
+
+The general shape, and it is the second time in three days: **a check that cannot see something
+reports the same green as a check that saw it and approved.** Only one of them is a verdict.
+
 What is genuinely lost: a second machine checking a PR *before* it merges. What replaces it is
 [`critic.md`](./critic.md) — fresh eyes on the work, which CI never provided at all.
 

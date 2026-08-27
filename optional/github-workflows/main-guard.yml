@@ -125,12 +125,25 @@ jobs:
       # `preflight.mjs` carries the other half: those four suites now declare `needsEnv`, so a
       # machine that genuinely has no key says "could not start" and names what it wants, instead
       # of reporting a defect that does not exist.
+      #
+      # `--require-secrets` IS LOAD-BEARING AND IS NOT BELT AND BRACES.
+      #
+      # "Could not start" gates nothing. Without this flag, the very condition above — no key on
+      # this runner — would turn a loud five-failure red into four quiet lines inside a GREEN run,
+      # on the ONLY venue that ever tests the squashed tree. `${{ secrets.X }}` renders as the
+      # empty string when the secret is missing, renamed, rotated to blank, or simply never
+      # created in the next repository to install this file. Every one of those would then be
+      # indistinguishable from a clean pass.
+      #
+      # The flag says: this machine was promised the secrets, so a missing one is a failure that
+      # names the secret. A developer's laptop does not pass it and stays quiet, because nobody
+      # there can fix a credential they were never meant to hold.
       - name: Preflight on the merged tree — everything, including the slow suites
         if: steps.scope.outputs.code == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npm run preflight -- --full
+        run: npm run preflight -- --full --require-secrets
 
       # The CI spend meter. It reads the billing API and needs secrets that exist only here, so
       # unlike the test suites it genuinely cannot move into the agent session. Optional: repos

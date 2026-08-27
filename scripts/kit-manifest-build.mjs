@@ -54,6 +54,23 @@ export const UNIVERSAL_SCRIPT_EXTRAS = [
   'kit-drift-check.mjs',
   'kit-drift-check.test.mjs',
   /**
+   * The docs-vs-reality checker (WORKFLOW-P39, 2026-08-26) and its suite.
+   *
+   * Kit-owned because the failure it catches is the workflow's, not any one product's: a plan
+   * document naming an npm command or a CI check that no longer exists. Both repos carry master
+   * docs, both demoted the same six workflows to `workflow_dispatch` on the same day, and a second
+   * copy edited in place is exactly what `kit:drift` exists to catch.
+   *
+   * Its ACCEPTANCE FILE is deliberately NOT here: `docs/projects/.docs-stale-accepted.json` holds a
+   * repo's own unfixed findings, which is repo data in the same sense a slice id is. The kit owns
+   * the mechanism; each repo owns its entries.
+   *
+   * `docs-stale-check.test.mjs` builds every fixture inline rather than reading a snapshot, so it
+   * stays a universal kit test instead of being classed repo-coupled by `seedClosure`.
+   */
+  'docs-stale-check.mjs',
+  'docs-stale-check.test.mjs',
+  /**
    * The hold gate and its STATIC import closure (AFKF-18b, 2026-08-26).
    *
    * `ralph-chain.mjs`, `ralph-master-registry.mjs`, `mc-status.mjs`, `mc-opener.mjs` and
@@ -399,18 +416,46 @@ export function buildManifest(kitRoot, repoRoot, { sourceRepo, generatedAt }) {
 export function installInto(kitRoot, repoRoot) {
   const manifest = JSON.parse(readFileSync(join(kitRoot, 'kit-manifest.json'), 'utf8'));
   let written = 0;
+  let seeded = 0;
   for (const f of manifest.files) {
-    if (f.check !== 'hash') continue;
     const src = join(kitRoot, f.kitPath);
     if (!existsSync(src)) continue;
     const dest = join(repoRoot, f.repoPath);
+
+    /**
+     * SEED MEANS "SHIP A STARTING COPY, NEVER OVERWRITE" — IT DOES NOT MEAN "NEVER SHIP".
+     *
+     * This branch used to be `if (f.check !== 'hash') continue`, so a seed-only file was skipped
+     * whether or not the repo had one. `install.sh` has always done the opposite — it copies every
+     * `scripts/*.mjs` the kit holds — so a repo seeded by the installer and a repo updated by
+     * `--install` ended up with different file sets, which is the sort of difference nobody notices
+     * until something imports across it.
+     *
+     * Measured 2026-08-26, and it is not hypothetical: installing the kit into `pp-shopify-theme`
+     * left `afkf-chain-queue.mjs` and `afkf-chat.mjs` absent while the manifest listed them, and
+     * `kit-drift-check.test.mjs` — which asserts every manifest path resolves to a real file — went
+     * red. `mc-status.mjs` reaches the queue through `await import()`, so the same gap also printed
+     * `HOLD: unknown` rather than failing loudly.
+     *
+     * Overwriting is still refused, and that half matters just as much: a seed file carries the
+     * repo's own slice ids and program map, so replacing one would seed this repo with another's
+     * data. Absent → copy. Present → leave it alone, whatever its bytes say.
+     */
+    if (f.check !== 'hash') {
+      if (existsSync(dest)) continue;
+      mkdirSync(dirname(dest), { recursive: true });
+      copyFileSync(src, dest);
+      seeded += 1;
+      continue;
+    }
+
     if (existsSync(dest) && sha256(dest) === sha256(src)) continue;
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(src, dest);
     written += 1;
   }
   copyFileSync(join(kitRoot, 'kit-manifest.json'), join(repoRoot, 'kit-manifest.json'));
-  return { written, total: manifest.files.length };
+  return { written, seeded, total: manifest.files.length };
 }
 
 function main() {
@@ -426,9 +471,10 @@ function main() {
   const asJson = argv.includes('--json');
 
   if (doInstall) {
-    const { written, total } = installInto(KIT_ROOT, repoRoot);
+    const { written, seeded, total } = installInto(KIT_ROOT, repoRoot);
     console.log(`Installed kit workflow into ${repoRoot}`);
     console.log(`  ${written} file(s) written of ${total} kit-owned paths · kit-manifest.json copied`);
+    console.log(`  ${seeded} repo-coupled file(s) seeded because this repo had none — existing ones were left alone`);
     console.log('  nothing was deleted');
     return;
   }

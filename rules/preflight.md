@@ -82,6 +82,57 @@ green** — that converts a real regression into a new normal, silently.
 Today's baselines (measured 2026-08-26 on `origin/main`, not remembered): `pp-shopify-theme` —
 repo suite **105**, `test:pb` **85**.
 
+## The documents are checked too
+
+`npm run docs:stale` reads every master doc under `docs/projects/` and reports anything it asserts
+that is no longer true. Three classes, and only three:
+
+| Class | What it catches |
+|---|---|
+| **A** | `npm run <x>` where `<x>` is not in `package.json` |
+| **B** | an exit test, slice block, or **`## STATUS DASHBOARD`** naming a GitHub check that no longer runs on a pull request |
+| **C** | a `HOLD:` line with no machine-readable `HOLD_UNTIL:` gate |
+
+**Severity depends on whether the programme is open, and that is the whole design.** A doc with
+`ACTIVE_SLICE: <ID>` is live, so a stale line in it is a live instruction that is wrong, and it
+fails. A closed programme is a **historical record**: a closed doc saying *"we ran
+`npm run agent:pp37982-content-soak`"* is true history, not rot, and rewriting it would falsify the
+record. Closed findings are printed and never gate. The same applies at finer grain — a slice whose
+own heading says ✅ or *(record only)* is history even inside an open programme.
+
+A line can say, in a form a machine reads, that it is a record rather than an instruction:
+
+```
+<!-- docs-stale: superseded by WORKFLOW-P36 -->   another TIME: it was true, a named change made it false
+<!-- docs-stale: elsewhere in pp-workspace -->    another REPO: the command is real, it is not here
+```
+
+**The reference is required** — a bare `superseded` suppresses nothing. That is the difference
+between an acknowledgement and a mute button, and every marker is listed on every run so it stays
+readable. `grep -rn "docs-stale:" docs/` shows all of them at once.
+
+A finding this repo has looked at and cannot fix yet goes in
+`docs/projects/.docs-stale-accepted.json` with a reason and the work it waits on. Repo data, not
+kit-owned. Printed every run, exactly like a ratchet baseline, and an entry that matches nothing is
+reported rather than failed — fixing something must never turn the build red. **Never add an entry
+to go green.**
+
+**The dashboard counts, and counts most.** §4 sends every execution session to read *"the master
+doc's `## STATUS DASHBOARD` block, and only that block"*, so a false claim there is read by more
+sessions than one buried in §12. Its history-carrying fields — `KNOWN_TRAP_*`, `BLOCKED_BY_NOTE`,
+`LAST_SOAK`, `LAST_MERGED_PR`, `LAST_DIGEST` — are exempt: a `KNOWN_TRAP` describing a check that
+was demoted is the write-up *of* the demotion, not rot. A log entry or a `KNOWN_TRAP` outside the
+dashboard is out of scope for class B for the same reason.
+
+It does not check file links; `npm run docs:check-paths` already owns those.
+
+**Why it exists.** Three times in two days this repository wrote a rule down correctly and then
+broke it, because nothing compared the written rule to reality: `HOLD:` was prose the launcher
+could not see and the chain started a slice six days early; `REQUIRED_CHECK_NAMES` outlived the
+workflow it named and made the merge gate unsatisfiable — recorded, in the same pull request that
+migrated the warning against it into `history.md`; and plan documents named commands that no longer
+exist. Written knowledge no code checks is decoration.
+
 ## The bargain
 
 CI's real gift was never the tests. It was that **it did not take the agent's word for it.** Moving

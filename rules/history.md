@@ -285,3 +285,34 @@ was right and the measurements backed it. What went unmeasured was which sentenc
 *because* they were unavoidable. Moving prose to a library is free only for prose nobody had to act
 on at a particular moment. Anything that must happen at a moment belongs to a machine — or it
 belongs in the file that is always open.
+
+## The eighteen-second green
+
+**2026-08-27.** `main guard` reported a pass, twice, for a tree it had never run. Not a quiet
+skip, not a red anybody argued with — a tick on the runs list, indistinguishable from the full
+370-second pass above it.
+
+Three correct decisions produced it. **The concurrency rule** cancels a superseded run, because
+only the newest `main` matters and the newest tree contains the older one. **The commit convention**
+lands a slice as code, then `chore(status)`, a minute apart. **The shortcut** skips the suite when a
+merge is docs only, which it truly cannot break. Run 33062548978 carried the code and was cancelled
+at 10:21:03 by the docs merge behind it; run 33062639475 asked what changed in that merge, saw one
+markdown file, and finished green in 19 seconds. A manual re-run 45 seconds later had no previous
+push to compare at all, fell back to the last commit — the same markdown file — and spent 18
+seconds agreeing.
+
+**The fault was in the range, not in any of the three.** "Is there any code in this merge?" is the
+wrong question the moment a merge's own run does not finish, and nothing in the workflow knew
+whether one had. The right question — *what have I actually finished verifying?* — was answerable
+the whole time, from the guard's own run history, which is the one record that cannot flatter it.
+
+**Rule that came from it:** the guard measures from the last tree it verified, never from the
+previous push, and a cancelled run is not a verified tree — so the responsibility transfers to the
+run that replaced it instead of dying with it. Every unknown runs the whole suite: no credential,
+no history, an API that will not answer, a base a force-push removed, or a person pressing the
+button, who is never asking to be told about yesterday.
+
+**The general lesson.** A shortcut is only as good as the thing it measures against, and a
+measurement taken from *the event* rather than *the last proven state* is wrong exactly when
+something went wrong — which is the only time it matters. Ask what you have proven, not what just
+happened.

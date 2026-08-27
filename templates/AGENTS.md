@@ -81,6 +81,8 @@ planned — clear exit tests, tags, `ON_FAIL: stop`. AFK means planning is done,
 one guard on `main` after the squash, and the scheduled jobs. Still batch the doc update, the status
 update and the fix into one push; a push is cheap now, but a half-finished PR is not. **Never smuggle
 a code change into a `chore(status):` commit** — `main-guard` skips docs-only merges by design.
+(It measures from the last tree it actually verified, so smuggled code is now caught rather than
+skipped — the rule stands because a cancelled run costing a full re-run is nobody's idea of cheap.)
 
 Do **not** push to `main`. Do **not** deploy production before merge unless the CEO says hotfix.
 

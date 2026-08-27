@@ -8,6 +8,7 @@
     "kit:drift": "node scripts/kit-drift-check.mjs",
     "kit:manifest": "node scripts/kit-manifest-build.mjs",
     "test:kit-drift": "node scripts/kit-drift-check.test.mjs",
+    "test:guard-scope": "node --test scripts/guard-scope.test.mjs",
     "docs:stale": "node scripts/docs-stale-check.mjs",
     "test:docs-stale": "node scripts/docs-stale-check.test.mjs"
   }

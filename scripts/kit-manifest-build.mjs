@@ -102,6 +102,19 @@ export const UNIVERSAL_SCRIPT_EXTRAS = [
   'afkf-digest.mjs',
   'afkf-ci-ceiling.mjs',
   'afkf-retry.mjs',
+  /**
+   * The merge guard's scope decision and its suite (WORKFLOW-P42, 2026-08-27).
+   *
+   * Kit-owned for the same reason `main-guard.yml` is: it IS that workflow's first step, and the
+   * two are useless apart. A repo holding the workflow without this script has a guard that cannot
+   * start; a repo holding the script without the workflow has a decision nothing consults.
+   *
+   * The suite ships with it. It builds every fixture inline and injects git and the API, so it
+   * stays universal — the one file it reads from disk is the workflow itself, found in the kit
+   * under `optional/` and in a repo under `.github/`.
+   */
+  'guard-scope.mjs',
+  'guard-scope.test.mjs',
 ];
 
 /**

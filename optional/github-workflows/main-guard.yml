@@ -122,9 +122,23 @@ jobs:
       # the guard. The key is already a secret this repository holds — `ralph-continue-on-merge`
       # passes it to four steps, and the spend meter below already reads it here.
       #
-      # `preflight.mjs` carries the other half: those four suites now declare `needsEnv`, so a
-      # machine that genuinely has no key says "could not start" and names what it wants, instead
-      # of reporting a defect that does not exist.
+      # `preflight.mjs` carries the other half: those four suites declare `needsEnv`, so a machine
+      # that genuinely has no key says "could not start" and names what it wants, instead of
+      # reporting a defect that does not exist.
+      #
+      # THE FLAG NAMES WHAT THIS VENUE HOLDS, AND IT IS A LIST BECAUSE THE FIRST RUN DISPROVED THE
+      # BOOLEAN. Run 33046276233 on pp-workspace: with the service-role key supplied,
+      # `test:afkf-11-db` passed in 6.6s — and `test:afkf-9`, `test:agg-4` and `test:pas-3` still
+      # failed in 0.3s, on a DIFFERENT credential. They also want `SUPABASE_ACCESS_TOKEN`, a
+      # Supabase MANAGEMENT token that no workflow in either repository has ever carried.
+      #
+      # A blanket "this machine holds the secrets" made those three a failure for a credential this
+      # job was never promised — the same false red the flag exists to prevent, pointed the other
+      # way. So the job lists what it actually has. A check wanting anything else reports "could
+      # not start" and names it, because putting a higher-privilege token into CI is a decision a
+      # person makes.
+      #
+      # Adding a name here is a promise: if that secret is missing or blank, this job goes red.
       #
       # `--require-secrets` IS LOAD-BEARING AND IS NOT BELT AND BRACES.
       #
@@ -143,7 +157,7 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npm run preflight -- --full --require-secrets
+        run: npm run preflight -- --full --require-secrets SUPABASE_SERVICE_ROLE_KEY
 
       # The CI spend meter. It reads the billing API and needs secrets that exist only here, so
       # unlike the test suites it genuinely cannot move into the agent session. Optional: repos

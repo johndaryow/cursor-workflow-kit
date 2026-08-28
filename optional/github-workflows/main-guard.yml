@@ -175,12 +175,29 @@ jobs:
       # The flag says: this machine was promised the secrets, so a missing one is a failure that
       # names the secret. A developer's laptop does not pass it and stays quiet, because nobody
       # there can fix a credential they were never meant to hold.
+      # CLOUDFLARE_API_TOKEN, ADDED 2026-08-27 ON THE CEO'S INSTRUCTION — AND WHY IT IS ON THE LIST.
+      #
+      # `deploy:owed` asks Cloudflare whether the live app carries what was merged (WORKFLOW-P41).
+      # Until now this venue had no token, so on every merge it reported "could not start" — which
+      # gates nothing, on the one venue that runs at the moment a merge happens. The check existed
+      # and could not answer precisely where the answer matters.
+      #
+      # A read-only Pages token, minted for this job alone. It reads a list of deployments and can
+      # change nothing — deliberately narrower than the token an agent session carries, because
+      # this one sits where code runs automatically.
+      #
+      # The list is COMMA-separated and one argument: `parseHeldSecrets` splits on commas, so a
+      # space here would silently drop the second name and restore the quiet skip.
+      #
+      # In pp-shopify-theme this line is inert, and that is by design rather than by luck: `held`
+      # only bites a check that declares `needsEnv`, and no check there declares this one.
       - name: Preflight on the merged tree — everything, including the slow suites
         if: steps.scope.outputs.code == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npm run preflight -- --full --require-secrets SUPABASE_SERVICE_ROLE_KEY
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm run preflight -- --full --require-secrets SUPABASE_SERVICE_ROLE_KEY,CLOUDFLARE_API_TOKEN
 
       # The CI spend meter. It reads the billing API and needs secrets that exist only here, so
       # unlike the test suites it genuinely cannot move into the agent session. Optional: repos

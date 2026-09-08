@@ -1,39 +1,17 @@
-# cursor-workflow-kit
+# Retired: cursor-workflow-kit
 
-**Central agent playbook** for Cursor Cloud Agents **and Claude Code** — shared across all your repos.
+This centralized agent workflow kit was retired by its owner on 2026-09-08.
+Do not install, sync, fork as a starter, or use its historical skills and rules for new work.
+The repository is retained as a read-only historical record; prior contents are available in Git history.
 
-Improve the process **here once** → update each product repo when ready. Same skills, same STATUS-dashboard-as-controller pattern, same AFK/HITL tags, for both agents — see [`claude/README.md`](./claude/README.md) for the Cursor ↔ Claude Code mapping and the one place they genuinely differ (auto-chaining after a merge).
+The installer now exits without changing its target. Skill distributions, manifests, templates,
+and GitHub Actions have been removed from the current branch. The GitHub repository will be
+archived after this retirement change is merged.
 
-See [`MANIFEST.md`](./MANIFEST.md) for the full list.
+Use your agent's default workflow with a short, project-specific AGENTS.md containing build/test
+commands, architecture facts, and deployment/data safeguards. No replacement centralized kit is needed.
+Existing copies in other repositories must be retired separately; archiving this repo cannot
+remove files or disable schedules that were already copied elsewhere.
 
-## The kit is the source, and drift goes red
-
-"Update each product repo when ready" used to mean *never*. Measured in code on 2026-08-19: of 81
-kit-owned paths, 20 were missing from this kit and 31 more had diverged from the repos it is meant to
-seed.
-
-Now `kit-manifest.json` says which paths the kit owns, and every repo runs `npm run kit:drift` on
-push and PR. It goes **red** when a copy has diverged, names the files, and says **which side is
-newer** — a check that only says "different" makes the next agent guess.
-
-```bash
-npm run kit:drift                                                  # in any repo, or here
-node scripts/kit-manifest-build.mjs --from ../pp-workspace --apply    # the kit takes a change
-node scripts/kit-manifest-build.mjs --from ../pp-workspace --install  # a repo takes it back
-```
-
-Deploy steps stay repo-local and are excluded on purpose — see MANIFEST.md, Tier 0.
-
-## Install into a product repo
-
-Tell your agent: **“Update workflow from central kit”**
-
-This lays down `AGENTS.md` (the one always-on rulebook, read by Claude Code, Cursor and Codex), `docs/rules/` (one copy of each rule, read on demand), `.claude/skills/` with `.cursor/skills` and `.agents/skills` symlinked to it, and thin `CLAUDE.md` / `.cursor/rules/000-agents.mdc` pointers.
-
-## Ralph GitHub Actions
-
-Workflow YAML files live in `optional/github-workflows/` — copy into each product repo's `.github/workflows/` when you enable the Ralph chain.
-
-## Version
-
-See [`VERSION`](./VERSION).
+Run `npm test` to verify the retired installer makes no changes. Historical installers pinned to
+old commits remain historical code and must not be run.

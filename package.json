@@ -3,13 +3,10 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "The source of the agent workflow. Repos install it; scripts/kit-drift-check.mjs goes red when a repo's copy has drifted (AFKF-1).",
+  "description": "Retired; retained for history only.",
   "scripts": {
-    "kit:drift": "node scripts/kit-drift-check.mjs",
-    "kit:manifest": "node scripts/kit-manifest-build.mjs",
-    "test:kit-drift": "node scripts/kit-drift-check.test.mjs",
-    "test:guard-scope": "node --test scripts/guard-scope.test.mjs",
-    "docs:stale": "node scripts/docs-stale-check.mjs",
-    "test:docs-stale": "node scripts/docs-stale-check.test.mjs"
+    "test": "node --test retirement.test.mjs",
+    "kit:drift": "bash install.sh",
+    "kit:manifest": "bash install.sh"
   }
 }
